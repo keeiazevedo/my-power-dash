@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   BarChart, Bar,
@@ -10,24 +10,10 @@ import {
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
 } from "recharts";
 import {
-  alteracoesAso,
-  recomendacaoNaoContratacao,
-  asoPeriodicoPrevReal,
-  catPorMes,
-  catPorSegmento,
-  catPorAno,
-  atendimentosEnfermagem,
-  atendimentosMerp,
-  atestadoMedico,
-  taxaAbsenteismo,
-  afastamentoInss,
-  afastamentoStatus,
-  limboPrevidenciario,
-  qualidadeVida,
-  qualidadeVidaResumo,
-  SEGMENTOS,
-  STATUS_AFAST,
-} from "@/lib/dashboard-data";
+  useDashboardData,
+  exportToExcel,
+  importFromExcel,
+} from "@/lib/dashboard-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -101,27 +87,46 @@ const tooltipStyle = {
 };
 
 function DashboardPage() {
+  const { data, save, reset } = useDashboardData();
   const [seg, setSeg] = useState<string>("TODOS");
+  const [importing, setImporting] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const totalCat = useMemo(() => catPorMes.reduce((s, r) => s + r.quantidade, 0), []);
+  const totalCat = useMemo(() => data.catPorMes.reduce((s, r) => s + r.quantidade, 0), [data]);
   const totalAtendEnf = useMemo(
-    () => atendimentosEnfermagem.reduce((s, r) => s + r.TOTAL, 0), []);
-  const totalMerp = useMemo(() => atendimentosMerp.reduce((s, r) => s + r.quantidade, 0), []);
-  const totalNaoContr = useMemo(() => recomendacaoNaoContratacao.reduce((s, r) => s + r.quantidade, 0), []);
-  const totalAsoPrev = useMemo(() => asoPeriodicoPrevReal.reduce((s, r) => s + r.PREVISTOS, 0), []);
-  const totalAsoReal = useMemo(() => asoPeriodicoPrevReal.reduce((s, r) => s + r.REALIZADOS, 0), []);
+    () => data.atendimentosEnfermagem.reduce((s, r) => s + r.TOTAL, 0), [data]);
+  const totalMerp = useMemo(() => data.atendimentosMerp.reduce((s, r) => s + r.quantidade, 0), [data]);
+  const totalNaoContr = useMemo(() => data.recomendacaoNaoContratacao.reduce((s, r) => s + r.quantidade, 0), [data]);
+  const totalAsoPrev = useMemo(() => data.asoPeriodicoPrevReal.reduce((s, r) => s + r.PREVISTOS, 0), [data]);
+  const totalAsoReal = useMemo(() => data.asoPeriodicoPrevReal.reduce((s, r) => s + r.REALIZADOS, 0), [data]);
 
   const atestadoFiltrado = useMemo(() => {
-    if (seg === "TODOS") return atestadoMedico;
-    return atestadoMedico.map((r) => ({ mes: r.mes, [seg]: r[seg] }));
-  }, [seg]);
+    if (seg === "TODOS") return data.atestadoMedico;
+    return data.atestadoMedico.map((r) => ({ mes: r.mes, [seg]: r[seg] }));
+  }, [seg, data]);
 
   const absentFiltrado = useMemo(() => {
-    if (seg === "TODOS") return taxaAbsenteismo;
-    return taxaAbsenteismo.map((r) => ({ mes: r.mes, [seg]: r[seg] }));
-  }, [seg]);
+    if (seg === "TODOS") return data.taxaAbsenteismo;
+    return data.taxaAbsenteismo.map((r) => ({ mes: r.mes, [seg]: r[seg] }));
+  }, [seg, data]);
 
-  const segList = seg === "TODOS" ? SEGMENTOS : [seg];
+  const segList = seg === "TODOS" ? data.segmentos : [seg];
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    setMsg(null);
+    try {
+      const next = await importFromExcel(file);
+      save(next);
+      setMsg("Dados importados com sucesso.");
+    } catch (e) {
+      setMsg("Erro ao importar: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -138,18 +143,56 @@ function DashboardPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Segmento</label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImport(f);
+              }}
+            />
+            <button
+              onClick={() => exportToExcel(data)}
+              className="rounded-md border border-primary bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary shadow-sm hover:bg-primary/5"
+            >
+              Baixar template
+            </button>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={importing}
+              className="rounded-md bg-primary px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50"
+            >
+              {importing ? "Importando..." : "Importar Excel"}
+            </button>
+            <button
+              onClick={() => {
+                if (confirm("Restaurar dados iniciais?")) {
+                  reset();
+                  setMsg("Dados restaurados.");
+                }
+              }}
+              className="rounded-md border bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm hover:bg-muted"
+            >
+              Restaurar
+            </button>
+            <label className="ml-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Segmento</label>
             <select
               value={seg}
               onChange={(e) => setSeg(e.target.value)}
               className="rounded-md border bg-white px-3 py-2 text-sm font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="TODOS">Todos</option>
-              {SEGMENTOS.map((s) => <option key={s} value={s}>{s}</option>)}
+              {data.segmentos.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>
+        {msg && (
+          <div className="mx-auto max-w-[1400px] px-4 pb-3 text-xs text-muted-foreground">{msg}</div>
+        )}
       </header>
+
 
       <main className="mx-auto max-w-[1400px] space-y-6 px-4 py-6">
         {/* KPIs */}
@@ -166,7 +209,7 @@ function DashboardPage() {
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card title="ASO Periódico - Previsto x Realizado" subtitle="Por mês">
             <ResponsiveContainer>
-              <BarChart data={asoPeriodicoPrevReal}>
+              <BarChart data={data.asoPeriodicoPrevReal}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
@@ -180,7 +223,7 @@ function DashboardPage() {
 
           <Card title="Alterações no ASO por Especialidade" subtitle="Admissional x Periódico">
             <ResponsiveContainer>
-              <BarChart data={alteracoesAso} layout="vertical" margin={{ left: 20 }}>
+              <BarChart data={data.alteracoesAso} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis type="number" tick={{ fontSize: 11 }} />
                 <YAxis type="category" dataKey="especialidade" tick={{ fontSize: 11 }} width={120} />
@@ -197,7 +240,7 @@ function DashboardPage() {
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Card title="Recomendação de Não Contratação (ASO)" subtitle="Por mês">
             <ResponsiveContainer>
-              <AreaChart data={recomendacaoNaoContratacao}>
+              <AreaChart data={data.recomendacaoNaoContratacao}>
                 <defs>
                   <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={GREEN} stopOpacity={0.7} />
@@ -215,7 +258,7 @@ function DashboardPage() {
 
           <Card title="CAT por Mês" subtitle="Comunicações de acidente">
             <ResponsiveContainer>
-              <BarChart data={catPorMes}>
+              <BarChart data={data.catPorMes}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
@@ -228,8 +271,8 @@ function DashboardPage() {
           <Card title="CAT por Segmento" subtitle="Distribuição no ano">
             <ResponsiveContainer>
               <PieChart>
-                <Pie data={catPorSegmento} dataKey="quantidade" nameKey="segmento" innerRadius={45} outerRadius={90} paddingAngle={2}>
-                  {catPorSegmento.map((_, i) => (
+                <Pie data={data.catPorSegmento} dataKey="quantidade" nameKey="segmento" innerRadius={45} outerRadius={90} paddingAngle={2}>
+                  {data.catPorSegmento.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
@@ -244,7 +287,7 @@ function DashboardPage() {
         <section>
           <Card title="CAT por Ano - Consolidado" subtitle="Com e sem afastamento, por segmento" className="!h-auto">
             <ResponsiveContainer>
-              <BarChart data={catPorAno}>
+              <BarChart data={data.catPorAno}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="segmento" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
@@ -267,7 +310,7 @@ function DashboardPage() {
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card title="Atendimentos de Enfermagem" subtitle="Diurno x Noturno x Total">
             <ResponsiveContainer>
-              <ComposedChart data={atendimentosEnfermagem}>
+              <ComposedChart data={data.atendimentosEnfermagem}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
@@ -282,7 +325,7 @@ function DashboardPage() {
 
           <Card title="Atendimentos MERP" subtitle="Por mês">
             <ResponsiveContainer>
-              <LineChart data={atendimentosMerp}>
+              <LineChart data={data.atendimentosMerp}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
@@ -330,13 +373,13 @@ function DashboardPage() {
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card title="Afastamento INSS por Segmento" subtitle="Por mês">
             <ResponsiveContainer>
-              <BarChart data={afastamentoInss}>
+              <BarChart data={data.afastamentoInss}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                {SEGMENTOS.map((s) => (
+                {data.segmentos.map((s) => (
                   <Bar key={s} dataKey={s} stackId="a" fill={SEG_COLORS[s]} />
                 ))}
               </BarChart>
@@ -345,13 +388,13 @@ function DashboardPage() {
 
           <Card title="Afastamentos por Status" subtitle="Evolução mensal">
             <ResponsiveContainer>
-              <AreaChart data={afastamentoStatus}>
+              <AreaChart data={data.afastamentoStatus}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                {STATUS_AFAST.map((s) => (
+                {data.statusAfast.map((s) => (
                   <Area key={s} type="monotone" dataKey={s} stackId="1" stroke={STATUS_COLORS[s]} fill={STATUS_COLORS[s]} fillOpacity={0.75} />
                 ))}
               </AreaChart>
@@ -363,13 +406,13 @@ function DashboardPage() {
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card title="Limbo Previdenciário por Segmento" subtitle="Colaboradores no limbo por mês">
             <ResponsiveContainer>
-              <AreaChart data={limboPrevidenciario}>
+              <AreaChart data={data.limboPrevidenciario}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                {SEGMENTOS.map((s) => (
+                {data.segmentos.map((s) => (
                   <Area key={s} type="monotone" dataKey={s} stackId="1" stroke={SEG_COLORS[s]} fill={SEG_COLORS[s]} fillOpacity={0.7} />
                 ))}
               </AreaChart>
@@ -378,13 +421,13 @@ function DashboardPage() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
-              <KPI label="Ações Previstas (ano)" value={qualidadeVidaResumo.previstaAno} />
-              <KPI label="Ações Realizadas (ano)" value={qualidadeVidaResumo.realizadaAno} accent={YELLOW} />
-              <KPI label="% Atendimento" value={`${(qualidadeVidaResumo.taxa * 100).toFixed(0)}%`} />
+              <KPI label="Ações Previstas (ano)" value={data.qualidadeVidaResumo.previstaAno} />
+              <KPI label="Ações Realizadas (ano)" value={data.qualidadeVidaResumo.realizadaAno} accent={YELLOW} />
+              <KPI label="% Atendimento" value={`${(data.qualidadeVidaResumo.taxa * 100).toFixed(0)}%`} />
             </div>
             <Card title="Qualidade de Vida - Previsto x Realizado" subtitle="Por mês" className="!p-4">
               <ResponsiveContainer>
-                <BarChart data={qualidadeVida}>
+                <BarChart data={data.qualidadeVida}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                   <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
