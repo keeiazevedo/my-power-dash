@@ -6,6 +6,7 @@ import {
   LineChart, Line,
   AreaChart, Area,
   PieChart, Pie, Cell,
+  ComposedChart,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
 } from "recharts";
 import {
