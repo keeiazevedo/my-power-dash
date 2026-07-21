@@ -267,7 +267,7 @@ function DashboardPage() {
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card title="Atendimentos de Enfermagem" subtitle="Diurno x Noturno x Total">
             <ResponsiveContainer>
-              <BarChart data={atendimentosEnfermagem}>
+              <ComposedChart data={atendimentosEnfermagem}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
@@ -276,7 +276,7 @@ function DashboardPage() {
                 <Bar dataKey="DIURNO" stackId="a" fill={GREEN} />
                 <Bar dataKey="NOTURNO" stackId="a" fill={YELLOW} />
                 <Line type="monotone" dataKey="TOTAL" stroke={GREEN_MARK} strokeWidth={2} />
-              </BarChart>
+              </ComposedChart>
             </ResponsiveContainer>
           </Card>
 
