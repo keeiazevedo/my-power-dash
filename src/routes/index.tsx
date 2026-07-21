@@ -87,27 +87,46 @@ const tooltipStyle = {
 };
 
 function DashboardPage() {
+  const { data, save, reset } = useDashboardData();
   const [seg, setSeg] = useState<string>("TODOS");
+  const [importing, setImporting] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const totalCat = useMemo(() => data.catPorMes.reduce((s, r) => s + r.quantidade, 0), []);
+  const totalCat = useMemo(() => data.catPorMes.reduce((s, r) => s + r.quantidade, 0), [data]);
   const totalAtendEnf = useMemo(
-    () => data.atendimentosEnfermagem.reduce((s, r) => s + r.TOTAL, 0), []);
-  const totalMerp = useMemo(() => data.atendimentosMerp.reduce((s, r) => s + r.quantidade, 0), []);
-  const totalNaoContr = useMemo(() => data.recomendacaoNaoContratacao.reduce((s, r) => s + r.quantidade, 0), []);
-  const totalAsoPrev = useMemo(() => data.asoPeriodicoPrevReal.reduce((s, r) => s + r.PREVISTOS, 0), []);
-  const totalAsoReal = useMemo(() => data.asoPeriodicoPrevReal.reduce((s, r) => s + r.REALIZADOS, 0), []);
+    () => data.atendimentosEnfermagem.reduce((s, r) => s + r.TOTAL, 0), [data]);
+  const totalMerp = useMemo(() => data.atendimentosMerp.reduce((s, r) => s + r.quantidade, 0), [data]);
+  const totalNaoContr = useMemo(() => data.recomendacaoNaoContratacao.reduce((s, r) => s + r.quantidade, 0), [data]);
+  const totalAsoPrev = useMemo(() => data.asoPeriodicoPrevReal.reduce((s, r) => s + r.PREVISTOS, 0), [data]);
+  const totalAsoReal = useMemo(() => data.asoPeriodicoPrevReal.reduce((s, r) => s + r.REALIZADOS, 0), [data]);
 
   const atestadoFiltrado = useMemo(() => {
     if (seg === "TODOS") return data.atestadoMedico;
     return data.atestadoMedico.map((r) => ({ mes: r.mes, [seg]: r[seg] }));
-  }, [seg]);
+  }, [seg, data]);
 
   const absentFiltrado = useMemo(() => {
     if (seg === "TODOS") return data.taxaAbsenteismo;
     return data.taxaAbsenteismo.map((r) => ({ mes: r.mes, [seg]: r[seg] }));
-  }, [seg]);
+  }, [seg, data]);
 
   const segList = seg === "TODOS" ? data.segmentos : [seg];
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    setMsg(null);
+    try {
+      const next = await importFromExcel(file);
+      save(next);
+      setMsg("Dados importados com sucesso.");
+    } catch (e) {
+      setMsg("Erro ao importar: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -124,7 +143,41 @@ function DashboardPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Segmento</label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImport(f);
+              }}
+            />
+            <button
+              onClick={() => exportToExcel(data)}
+              className="rounded-md border border-primary bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary shadow-sm hover:bg-primary/5"
+            >
+              Baixar template
+            </button>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={importing}
+              className="rounded-md bg-primary px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50"
+            >
+              {importing ? "Importando..." : "Importar Excel"}
+            </button>
+            <button
+              onClick={() => {
+                if (confirm("Restaurar dados iniciais?")) {
+                  reset();
+                  setMsg("Dados restaurados.");
+                }
+              }}
+              className="rounded-md border bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm hover:bg-muted"
+            >
+              Restaurar
+            </button>
+            <label className="ml-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Segmento</label>
             <select
               value={seg}
               onChange={(e) => setSeg(e.target.value)}
@@ -135,7 +188,11 @@ function DashboardPage() {
             </select>
           </div>
         </div>
+        {msg && (
+          <div className="mx-auto max-w-[1400px] px-4 pb-3 text-xs text-muted-foreground">{msg}</div>
+        )}
       </header>
+
 
       <main className="mx-auto max-w-[1400px] space-y-6 px-4 py-6">
         {/* KPIs */}
