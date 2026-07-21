@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   BarChart, Bar,
@@ -10,24 +10,10 @@ import {
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
 } from "recharts";
 import {
-  alteracoesAso,
-  recomendacaoNaoContratacao,
-  asoPeriodicoPrevReal,
-  catPorMes,
-  catPorSegmento,
-  catPorAno,
-  atendimentosEnfermagem,
-  atendimentosMerp,
-  atestadoMedico,
-  taxaAbsenteismo,
-  afastamentoInss,
-  afastamentoStatus,
-  limboPrevidenciario,
-  qualidadeVida,
-  qualidadeVidaResumo,
-  SEGMENTOS,
-  STATUS_AFAST,
-} from "@/lib/dashboard-data";
+  useDashboardData,
+  exportToExcel,
+  importFromExcel,
+} from "@/lib/dashboard-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
