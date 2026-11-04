@@ -94,7 +94,7 @@ function toNum(v: unknown): number {
 }
 
 // ---------- Export ----------
-export function exportToExcel(data: DashboardData) {
+export function exportToExcel(data: DashboardData, fileName = "dashboard-saude.xlsx") {
   const wb = XLSX.utils.book_new();
 
   const add = (name: string, rows: unknown[]) => {
@@ -118,7 +118,7 @@ export function exportToExcel(data: DashboardData) {
   add(SHEETS.QV, data.qualidadeVida);
   add(SHEETS.QV_RESUMO, [data.qualidadeVidaResumo]);
 
-  XLSX.writeFile(wb, "dashboard-saude.xlsx");
+  XLSX.writeFile(wb, fileName);
 }
 
 // ---------- Import ----------
