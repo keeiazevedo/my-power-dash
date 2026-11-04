@@ -110,6 +110,8 @@ function DashboardPage() {
   const segAtivo = seg !== "TODOS" && data.segmentos.includes(seg) ? seg : "TODOS";
   const segList = segAtivo === "TODOS" ? data.segmentos : [segAtivo];
   const segSubtitle = segAtivo === "TODOS" ? "Todos os segmentos" : segAtivo;
+  const atestadoFiltrado = data.atestadoMedico;
+  const absentFiltrado = data.taxaAbsenteismo;
 
   const catSegFiltrado = useMemo(
     () => (segAtivo === "TODOS" ? data.catPorSegmento : data.catPorSegmento.filter((r) => r.segmento === segAtivo)),
@@ -208,7 +210,7 @@ function DashboardPage() {
             </button>
             <label className="ml-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Segmento</label>
             <select
-              value={seg}
+              value={segAtivo}
               onChange={(e) => setSeg(e.target.value)}
               className="rounded-md border bg-white px-3 py-2 text-sm font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
@@ -297,12 +299,12 @@ function DashboardPage() {
             </ResponsiveContainer>
           </Card>
 
-          <Card title="CAT por Segmento" subtitle="Distribuição no ano">
+          <Card title="CAT por Segmento" subtitle={segSubtitle}>
             <ResponsiveContainer>
               <PieChart>
                 <Pie data={catSegFiltrado} dataKey="quantidade" nameKey="segmento" innerRadius={45} outerRadius={90} paddingAngle={2}>
                   {catSegFiltrado.map((r, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    <Cell key={i} fill={SEG_COLORS[r.segmento] ?? PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle} />
@@ -368,7 +370,7 @@ function DashboardPage() {
 
         {/* Row 5 - Atestado + Absenteísmo (filtráveis) */}
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Atestados Médicos por Segmento" subtitle={seg === "TODOS" ? "Todos os segmentos" : seg}>
+          <Card title="Atestados Médicos por Segmento" subtitle={segSubtitle}>
             <ResponsiveContainer>
               <BarChart data={atestadoFiltrado}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -383,7 +385,7 @@ function DashboardPage() {
             </ResponsiveContainer>
           </Card>
 
-          <Card title="Taxa de Absenteísmo (%)" subtitle={seg === "TODOS" ? "Todos os segmentos" : seg}>
+          <Card title="Taxa de Absenteísmo (%)" subtitle={segSubtitle}>
             <ResponsiveContainer>
               <LineChart data={absentFiltrado}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -401,7 +403,7 @@ function DashboardPage() {
 
         {/* Row 6 - Afastamentos */}
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Afastamento INSS por Segmento" subtitle="Por mês">
+          <Card title="Afastamento INSS por Segmento" subtitle={segSubtitle}>
             <ResponsiveContainer>
               <BarChart data={data.afastamentoInss}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -434,7 +436,7 @@ function DashboardPage() {
 
         {/* Row 7 - Limbo + Qualidade de Vida */}
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Limbo Previdenciário por Segmento" subtitle="Colaboradores no limbo por mês">
+          <Card title="Limbo Previdenciário por Segmento" subtitle={segSubtitle}>
             <ResponsiveContainer>
               <AreaChart data={data.limboPrevidenciario}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
