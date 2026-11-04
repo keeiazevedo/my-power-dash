@@ -13,7 +13,10 @@ import {
   useDashboardData,
   exportToExcel,
   importFromExcel,
+  SETORES,
 } from "@/lib/dashboard-store";
+
+const ANOS = ["2025", "2026", "2027"];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -87,7 +90,10 @@ const tooltipStyle = {
 };
 
 function DashboardPage() {
-  const { data, save, reset } = useDashboardData();
+  const [setor, setSetor] = useState<string>("SAUDE");
+  const [ano, setAno] = useState<string>("2025");
+  const { data, save, reset } = useDashboardData(setor, ano);
+  const setorLabel = SETORES.find((s) => s.id === setor)?.label ?? setor;
   const [seg, setSeg] = useState<string>("TODOS");
   const [importing, setImporting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -101,17 +107,21 @@ function DashboardPage() {
   const totalAsoPrev = useMemo(() => data.asoPeriodicoPrevReal.reduce((s, r) => s + r.PREVISTOS, 0), [data]);
   const totalAsoReal = useMemo(() => data.asoPeriodicoPrevReal.reduce((s, r) => s + r.REALIZADOS, 0), [data]);
 
-  const atestadoFiltrado = useMemo(() => {
-    if (seg === "TODOS") return data.atestadoMedico;
-    return data.atestadoMedico.map((r) => ({ mes: r.mes, [seg]: r[seg] }));
-  }, [seg, data]);
+  const segAtivo = seg !== "TODOS" && data.segmentos.includes(seg) ? seg : "TODOS";
+  const segList = segAtivo === "TODOS" ? data.segmentos : [segAtivo];
+  const segSubtitle = segAtivo === "TODOS" ? "Todos os segmentos" : segAtivo;
+  const atestadoFiltrado = data.atestadoMedico;
+  const absentFiltrado = data.taxaAbsenteismo;
 
-  const absentFiltrado = useMemo(() => {
-    if (seg === "TODOS") return data.taxaAbsenteismo;
-    return data.taxaAbsenteismo.map((r) => ({ mes: r.mes, [seg]: r[seg] }));
-  }, [seg, data]);
-
-  const segList = seg === "TODOS" ? data.segmentos : [seg];
+  const catSegFiltrado = useMemo(
+    () => (segAtivo === "TODOS" ? data.catPorSegmento : data.catPorSegmento.filter((r) => r.segmento === segAtivo)),
+    [segAtivo, data]);
+  const catAnoFiltrado = useMemo(
+    () => (segAtivo === "TODOS" ? data.catPorAno : data.catPorAno.filter((r) => r.segmento === segAtivo)),
+    [segAtivo, data]);
+  const catAnoKeys = useMemo(
+    () => Object.keys(data.catPorAno[0] ?? {}).filter((k) => k !== "segmento").sort(),
+    [data]);
 
   const handleImport = async (file: File) => {
     setImporting(true);
@@ -137,8 +147,29 @@ function DashboardPage() {
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-md" style={{ background: `linear-gradient(135deg, ${GREEN} 50%, ${YELLOW} 50%)` }} />
               <div>
-                <h1 className="text-xl font-bold text-foreground sm:text-2xl">Dashboard Saúde Ocupacional</h1>
+                <h1 className="text-xl font-bold text-foreground sm:text-2xl">Dashboard {setorLabel} • {ano}</h1>
                 <p className="text-xs text-muted-foreground">Indicadores consolidados por mês e segmento</p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {SETORES.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setSetor(s.id)}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${setor === s.id ? "bg-primary text-primary-foreground" : "border bg-white text-muted-foreground hover:bg-muted"}`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                  <span className="mx-1 w-px bg-border" />
+                  {ANOS.map((a) => (
+                    <button
+                      key={a}
+                      onClick={() => setAno(a)}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${ano === a ? "bg-accent text-accent-foreground" : "border bg-white text-muted-foreground hover:bg-muted"}`}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -154,7 +185,7 @@ function DashboardPage() {
               }}
             />
             <button
-              onClick={() => exportToExcel(data)}
+              onClick={() => exportToExcel(data, `dashboard-${setor.toLowerCase()}-${ano}.xlsx`)}
               className="rounded-md border border-primary bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary shadow-sm hover:bg-primary/5"
             >
               Baixar template
@@ -179,7 +210,7 @@ function DashboardPage() {
             </button>
             <label className="ml-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Segmento</label>
             <select
-              value={seg}
+              value={segAtivo}
               onChange={(e) => setSeg(e.target.value)}
               className="rounded-md border bg-white px-3 py-2 text-sm font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
@@ -268,12 +299,12 @@ function DashboardPage() {
             </ResponsiveContainer>
           </Card>
 
-          <Card title="CAT por Segmento" subtitle="Distribuição no ano">
+          <Card title="CAT por Segmento" subtitle={segSubtitle}>
             <ResponsiveContainer>
               <PieChart>
-                <Pie data={data.catPorSegmento} dataKey="quantidade" nameKey="segmento" innerRadius={45} outerRadius={90} paddingAngle={2}>
-                  {data.catPorSegmento.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                <Pie data={catSegFiltrado} dataKey="quantidade" nameKey="segmento" innerRadius={45} outerRadius={90} paddingAngle={2}>
+                  {catSegFiltrado.map((r, i) => (
+                    <Cell key={i} fill={SEG_COLORS[r.segmento] ?? PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle} />
@@ -287,20 +318,21 @@ function DashboardPage() {
         <section>
           <Card title="CAT por Ano - Consolidado" subtitle="Com e sem afastamento, por segmento" className="!h-auto">
             <ResponsiveContainer>
-              <BarChart data={data.catPorAno}>
+              <BarChart data={catAnoFiltrado}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="segmento" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="2022 s/afast" fill={GREEN_45} />
-                <Bar dataKey="2022 c/afast" fill={YELLOW_45} />
-                <Bar dataKey="2023 s/afast" fill={GREEN_60} />
-                <Bar dataKey="2023 c/afast" fill={YELLOW_65} />
-                <Bar dataKey="2024 s/afast" fill={GREEN_80} />
-                <Bar dataKey="2024 c/afast" fill={YELLOW_80} />
-                <Bar dataKey="2025 s/afast" fill={GREEN} />
-                <Bar dataKey="2025 c/afast" fill={YELLOW} />
+                {catAnoKeys.map((k) => {
+                  const anosOrd = Array.from(new Set(catAnoKeys.map((x) => x.split(" ")[0])));
+                  const idx = anosOrd.indexOf(k.split(" ")[0]);
+                  const greens = [GREEN_45, GREEN_60, GREEN_80, GREEN];
+                  const yellows = [YELLOW_45, YELLOW_65, YELLOW_80, YELLOW];
+                  const pos = Math.max(0, greens.length - anosOrd.length + idx);
+                  const fill = k.includes("c/") ? yellows[pos] : greens[pos];
+                  return <Bar key={k} dataKey={k} fill={fill} />;
+                })}
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -338,7 +370,7 @@ function DashboardPage() {
 
         {/* Row 5 - Atestado + Absenteísmo (filtráveis) */}
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Atestados Médicos por Segmento" subtitle={seg === "TODOS" ? "Todos os segmentos" : seg}>
+          <Card title="Atestados Médicos por Segmento" subtitle={segSubtitle}>
             <ResponsiveContainer>
               <BarChart data={atestadoFiltrado}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -353,7 +385,7 @@ function DashboardPage() {
             </ResponsiveContainer>
           </Card>
 
-          <Card title="Taxa de Absenteísmo (%)" subtitle={seg === "TODOS" ? "Todos os segmentos" : seg}>
+          <Card title="Taxa de Absenteísmo (%)" subtitle={segSubtitle}>
             <ResponsiveContainer>
               <LineChart data={absentFiltrado}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -371,7 +403,7 @@ function DashboardPage() {
 
         {/* Row 6 - Afastamentos */}
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Afastamento INSS por Segmento" subtitle="Por mês">
+          <Card title="Afastamento INSS por Segmento" subtitle={segSubtitle}>
             <ResponsiveContainer>
               <BarChart data={data.afastamentoInss}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -379,7 +411,7 @@ function DashboardPage() {
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                {data.segmentos.map((s) => (
+                {segList.map((s) => (
                   <Bar key={s} dataKey={s} stackId="a" fill={SEG_COLORS[s]} />
                 ))}
               </BarChart>
@@ -404,7 +436,7 @@ function DashboardPage() {
 
         {/* Row 7 - Limbo + Qualidade de Vida */}
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Limbo Previdenciário por Segmento" subtitle="Colaboradores no limbo por mês">
+          <Card title="Limbo Previdenciário por Segmento" subtitle={segSubtitle}>
             <ResponsiveContainer>
               <AreaChart data={data.limboPrevidenciario}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -412,7 +444,7 @@ function DashboardPage() {
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                {data.segmentos.map((s) => (
+                {segList.map((s) => (
                   <Area key={s} type="monotone" dataKey={s} stackId="1" stroke={SEG_COLORS[s]} fill={SEG_COLORS[s]} fillOpacity={0.7} />
                 ))}
               </AreaChart>
@@ -442,7 +474,7 @@ function DashboardPage() {
         </section>
 
         <footer className="pt-4 text-center text-xs text-muted-foreground">
-          Fonte: BASE_POWER_BI_SAÚDE_rev1.xlsx • Cores da marca Bravante
+          Setor {setorLabel} • Ano {ano} • Cores da marca Bravante
         </footer>
       </main>
     </div>
