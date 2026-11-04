@@ -237,36 +237,88 @@ export async function importFromExcel(file: File): Promise<DashboardData> {
   };
 }
 
+// ---------- Empty template (same structure, zeros) ----------
+export function makeEmptyData(ano: string): DashboardData {
+  const zeroSegMes = (keys: string[]) =>
+    MESES.map((mes) => {
+      const r: Record<string, string | number> = { mes };
+      keys.forEach((k) => (r[k] = 0));
+      return r;
+    });
+  const yy = Number(ano);
+  const anos = [yy - 3, yy - 2, yy - 1, yy];
+  return {
+    meses: MESES,
+    segmentos: SEGMENTOS,
+    statusAfast: STATUS_AFAST,
+    alteracoesAso: alteracoesAso.map((r) => ({ especialidade: r.especialidade, ADMISSIONAL: 0, PERIODICO: 0 })),
+    recomendacaoNaoContratacao: MESES.map((mes) => ({ mes, quantidade: 0 })),
+    asoPeriodicoPrevReal: MESES.map((mes) => ({ mes, PREVISTOS: 0, REALIZADOS: 0 })),
+    catPorMes: MESES.map((mes) => ({ mes, quantidade: 0 })),
+    catPorSegmento: SEGMENTOS.map((segmento) => ({ segmento, quantidade: 0 })),
+    catPorAno: SEGMENTOS.map((segmento) => {
+      const r: Record<string, string | number> = { segmento };
+      anos.forEach((a) => { r[`${a} s/afast`] = 0; r[`${a} c/afast`] = 0; });
+      return r;
+    }),
+    atendimentosEnfermagem: MESES.map((mes) => ({ mes, DIURNO: 0, NOTURNO: 0, TOTAL: 0 })),
+    atendimentosMerp: MESES.map((mes) => ({ mes, quantidade: 0 })),
+    atestadoMedico: zeroSegMes(SEGMENTOS),
+    taxaAbsenteismo: zeroSegMes(SEGMENTOS),
+    afastamentoInss: zeroSegMes(SEGMENTOS),
+    afastamentoStatus: zeroSegMes(STATUS_AFAST),
+    limboPrevidenciario: zeroSegMes(SEGMENTOS),
+    qualidadeVida: MESES.map((mes) => ({ mes, PREVISTA: 0, REALIZADA: 0 })),
+    qualidadeVidaResumo: { previstaAno: 0, realizadaAno: 0, taxa: 0 },
+  };
+}
+
+export const SETORES = [
+  { id: "SAUDE", label: "Saúde" },
+  { id: "ADMINISTRATIVO", label: "Administrativo" },
+] as const;
+
+export function baseDataFor(setor: string, ano: string): DashboardData {
+  return setor === "SAUDE" && ano === "2025" ? defaultData : makeEmptyData(ano);
+}
+
+const keyFor = (setor: string, ano: string) => `dashboard-${setor}-${ano}`;
+
 // ---------- Hook ----------
-export function useDashboardData() {
-  const [data, setData] = useState<DashboardData>(defaultData);
+export function useDashboardData(setor: string, ano: string) {
+  const [data, setData] = useState<DashboardData>(() => baseDataFor(setor, ano));
 
   useEffect(() => {
+    let next = baseDataFor(setor, ano);
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setData(JSON.parse(raw));
+      const raw =
+        localStorage.getItem(keyFor(setor, ano)) ??
+        (setor === "SAUDE" && ano === "2025" ? localStorage.getItem(STORAGE_KEY) : null);
+      if (raw) next = JSON.parse(raw);
     } catch {
       /* ignore */
     }
-  }, []);
+    setData(next);
+  }, [setor, ano]);
 
   const save = useCallback((next: DashboardData) => {
     setData(next);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      localStorage.setItem(keyFor(setor, ano), JSON.stringify(next));
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [setor, ano]);
 
   const reset = useCallback(() => {
-    setData(defaultData);
+    setData(baseDataFor(setor, ano));
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(keyFor(setor, ano));
+      if (setor === "SAUDE" && ano === "2025") localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [setor, ano]);
 
   return { data, save, reset };
 }
