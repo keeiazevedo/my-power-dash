@@ -143,6 +143,37 @@ function DashboardPage() {
   const { data, save, reset } = useDashboardData(setor, ano);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  if (setor === "ADMINISTRATIVO") {
+    return (
+      <AdmDashboard
+        ano={ano}
+        setAno={setAno}
+        header={
+          <div className="no-print flex flex-wrap items-center gap-1.5">
+            {SETORES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => {
+                  setSetor(s.id);
+                  if (s.id === "SAUDE") setAno("2025");
+                  if (s.id === "ADMINISTRATIVO") setAno("2026");
+                }}
+                className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors cursor-pointer ${
+                  setor === s.id
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "border bg-white text-muted-foreground hover:bg-muted"
+                }}`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        }
+      />
+    );
+  }
+
   const setorLabel = SETORES.find((s) => s.id === setor)?.label ?? setor;
   const periodoOptions = useMemo(() => getPeriodoOptions(data.meses), [data.meses]);
   const periodoAtual =
