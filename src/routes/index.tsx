@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
@@ -61,6 +61,7 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
 import { BrandTooltip, ChartCard } from "@/components/dashboard/chart-card";
 import { DashboardEmptyState } from "@/components/dashboard/empty-state";
+import { AdmDashboard } from "@/components/AdmDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,

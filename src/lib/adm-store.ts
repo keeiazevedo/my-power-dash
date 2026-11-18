@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import base2026 from "./adm-data-2026.json";
 
@@ -12,7 +12,7 @@ export type ChamadoRow = { mes: string; solucionados: number; total: number };
 export type AdmData = { uber: UberRow[]; viagens: ViagemRow[]; chamados: ChamadoRow[] };
 
 const empty: AdmData = { uber: [], viagens: [], chamados: [] };
-export const baseAdm = (ano: string): AdmData => (ano === "2026" ? (base2026 as AdmData) : empty);
+export const baseAdm = (ano: string): AdmData => (ano === "2026" || ano === "2025" ? (base2026 as AdmData) : empty);
 
 const norm = (s: unknown) =>
   String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
