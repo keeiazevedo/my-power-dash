@@ -27,9 +27,9 @@ function Card({ title, subtitle, children, className = "" }: { title: string; su
 }
 function KPI({ label, value, accent = GREEN }: { label: string; value: string | number; accent?: string }) {
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
+    <div className="rounded-xl border bg-card p-4 shadow-sm min-w-0">
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-1 text-2xl font-bold" style={{ color: accent }}>{value}</div>
+      <div className="mt-1 text-2xl font-bold tracking-tight" style={{ color: accent }}>{value}</div>
     </div>
   );
 }
