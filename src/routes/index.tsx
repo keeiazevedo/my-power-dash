@@ -133,8 +133,8 @@ type TabValue =
   | "visao-completa";
 
 function DashboardPage() {
-  const [setor, setSetor] = useState<string>("SAUDE");
-  const [ano, setAno] = useState<string>("2025");
+  const [setor, setSetor] = useState<string>("ADMINISTRATIVO");
+  const [ano, setAno] = useState<string>("2026");
   const [periodo, setPeriodo] = useState<PeriodoId>("ANO");
   const [seg, setSeg] = useState<string>("TODOS");
   const [activeTab, setActiveTab] = useState<TabValue>("visao-executiva");
