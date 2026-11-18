@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+﻿import { useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, ComposedChart,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
@@ -167,7 +167,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
           <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
           <KPI label="Ticket médio Uber" value={brl(totCorr ? totUber / totCorr : 0)} />
           <KPI label="Gasto Viagens" value={brl(totVia)} accent={YELLOW} />
-          <KPI label="Chamados TI" value={totCh.toLocaleString("pt-BR")} />
+          <KPI label="Chamados Administrativo" value={totCh.toLocaleString("pt-BR")} />
           <KPI label="% Resolução" value={`${totCh ? ((totSol / totCh) * 100).toFixed(1) : 0}%`} accent={YELLOW} />
         </section>
 
@@ -234,7 +234,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
         </section>
 
         <section>
-          <Card title="Chamados de TI - Solucionados x Total" subtitle="Todos os segmentos (sem divisão por segmento na planilha)">
+          <Card title="CHAMADO DO ADMINISTRATIVO - SOLUCIONADOS X TOTAL" subtitle="Todos os segmentos (sem divisão por segmento na planilha)">
             <ResponsiveContainer>
               <ComposedChart data={chamados}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
