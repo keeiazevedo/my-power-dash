@@ -162,7 +162,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
       </header>
 
       <main className="mx-auto max-w-[1400px] space-y-6 px-4 py-6">
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <KPI label="Gasto Uber" value={brl(totUber)} />
           <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
           <KPI label="Ticket médio Uber" value={brl(totCorr ? totUber / totCorr : 0)} />
