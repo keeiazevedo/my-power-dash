@@ -135,13 +135,6 @@ type TabValue =
 function DashboardPage() {
   const [setor, setSetor] = useState<string>("ADMINISTRATIVO");
   const [ano, setAno] = useState<string>("2026");
-  const [periodo, setPeriodo] = useState<PeriodoId>("ANO");
-  const [seg, setSeg] = useState<string>("TODOS");
-  const [activeTab, setActiveTab] = useState<TabValue>("visao-executiva");
-  const [importing, setImporting] = useState(false);
-
-  const { data, save, reset } = useDashboardData(setor, ano);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   if (setor === "ADMINISTRATIVO") {
     return (
@@ -173,6 +166,35 @@ function DashboardPage() {
       />
     );
   }
+
+  return (
+    <SaudeDashboard
+      setor={setor}
+      setSetor={setSetor}
+      ano={ano}
+      setAno={setAno}
+    />
+  );
+}
+
+function SaudeDashboard({
+  setor,
+  setSetor,
+  ano,
+  setAno,
+}: {
+  setor: string;
+  setSetor: (s: string) => void;
+  ano: string;
+  setAno: (a: string) => void;
+}) {
+  const [periodo, setPeriodo] = useState<PeriodoId>("ANO");
+  const [seg, setSeg] = useState<string>("TODOS");
+  const [activeTab, setActiveTab] = useState<TabValue>("visao-executiva");
+  const [importing, setImporting] = useState(false);
+
+  const { data, save, reset } = useDashboardData(setor, ano);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const setorLabel = SETORES.find((s) => s.id === setor)?.label ?? setor;
   const periodoOptions = useMemo(() => getPeriodoOptions(data.meses), [data.meses]);

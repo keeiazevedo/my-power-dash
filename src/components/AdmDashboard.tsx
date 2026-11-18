@@ -68,7 +68,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
   const viaValorMes = bySegMes(via, (r: { valor: number }) => r.valor);
   const uberServico = sumBy(uber, (r) => r.servico, (r) => r.valor).slice(0, 8);
   const uberSeg = sumBy(uber, (r) => r.segmento, (r) => r.valor);
-  const viaProduto = sumBy(via, (r) => r.produto, (r) => r.valor);
+  const viaProduto = sumBy(via, (r) => r.produto, (r) => r.valor).slice(0, 5);
   const viaSeg = sumBy(via, (r) => r.segmento, (r) => r.valor);
   const topProdutos = viaProduto.slice(0, 5).map((p) => p.name);
   const viaProdMes = mesesAtivos.map((mes) => {
