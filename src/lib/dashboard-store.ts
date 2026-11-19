@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import * as XLSX from "xlsx";
+import saude2026 from "./saude-data-2026.json";
 import {
   MESES,
   alteracoesAso,
@@ -279,6 +280,7 @@ export const SETORES = [
 ] as const;
 
 export function baseDataFor(setor: string, ano: string): DashboardData {
+  if (setor === "SAUDE" && ano === "2026") return saude2026 as DashboardData;
   return setor === "SAUDE" && ano === "2025" ? defaultData : makeEmptyData(ano);
 }
 
