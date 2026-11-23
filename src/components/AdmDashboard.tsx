@@ -1,8 +1,10 @@
-﻿import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, ComposedChart,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
 } from "recharts";
+import { InsightsPanel } from "@/components/dashboard/insights-panel";
+import { admMonths, computeAdmExecutive, type AdmComparison } from "@/lib/adm-analytics";
 import { useAdmData, importAdm, exportAdm, MESES_ADM, SEGMENTOS_ADM, ANOS_ADM } from "@/lib/adm-store";
 
 const GREEN = "#007A4D", GREEN_80 = "#3BA27E", GREEN_60 = "#5CAF8F", GREEN_45 = "#87C3A9", GREEN_MARK = "#4E7F71";
@@ -25,11 +27,20 @@ function Card({ title, subtitle, children, className = "" }: { title: string; su
     </div>
   );
 }
-function KPI({ label, value, accent = GREEN }: { label: string; value: string | number; accent?: string }) {
+function Delta({ c, fmt, prev, goodDown = true, pp }: { c?: AdmComparison; fmt: (n: number) => string; prev: string | null; goodDown?: boolean; pp?: boolean }) {
+  if (!c || c.delta === null || !prev) return <div className="mt-1 text-[11px] text-muted-foreground">Sem comparação com mês anterior</div>;
+  const up = c.delta > 0, flat = c.delta === 0;
+  const good = flat ? null : goodDown ? !up : up;
+  const cls = good === null ? "bg-muted text-muted-foreground" : good ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800";
+  const txt = pp ? `${up ? "+" : ""}${c.delta.toFixed(1)} p.p.` : `${up ? "+" : flat ? "" : "−"}${fmt(Math.abs(c.delta))}${c.percent !== null ? ` (${up ? "+" : ""}${c.percent.toFixed(1)}%)` : ""}`;
+  return <div className="mt-2"><span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${cls}`}>{flat ? "Estável" : (up ? "▲ " : "▼ ") + txt} vs {prev}</span></div>;
+}
+function KPI({ label, value, accent = GREEN, children }: { label: string; value: string | number; accent?: string; children?: React.ReactNode }) {
   return (
     <div className="rounded-xl border bg-card p-4 shadow-sm min-w-0">
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-1 text-2xl font-bold tracking-tight" style={{ color: accent }}>{value}</div>
+      {children}
     </div>
   );
 }
@@ -85,6 +96,13 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
     const c = data.chamados.find((x) => x.mes === mes);
     return { mes, Solucionados: c?.solucionados ?? 0, Total: c?.total ?? 0, "% Resolução": c && c.total ? +((c.solucionados / c.total) * 100).toFixed(1) : 0 };
   });
+
+  const meses = admMonths(data);
+  const [mesSel, setMesSel] = useState<string>("");
+  const mesRef = meses.includes(mesSel) ? mesSel : meses[meses.length - 1] ?? "";
+  const exec = useMemo(() => (mesRef ? computeAdmExecutive(data, seg, mesRef) : null), [data, seg, mesRef]);
+  const cmp = exec?.comparisons, prev = exec?.previousMonth ?? null;
+  const num = (n: number) => Math.round(n).toLocaleString("pt-BR");
 
   const totUber = uber.reduce((a, r) => a + r.valor, 0);
   const totCorr = uber.reduce((a, r) => a + r.corridas, 0);
@@ -162,6 +180,27 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
       </header>
 
       <main className="mx-auto max-w-[1400px] space-y-6 px-4 py-6">
+        {exec && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Mês de referência</span>
+              <select value={mesRef} onChange={(e) => setMesSel(e.target.value)} className="rounded-md border bg-white px-3 py-1.5 text-sm font-medium shadow-sm">
+                {meses.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <span className="text-xs text-muted-foreground">{prev ? `comparado com ${prev}` : "sem mês anterior para comparar"} • {sub}</span>
+            </div>
+            <InsightsPanel insights={exec.insights} periodoLabel={`${mesRef}/${ano}`} />
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <KPI label={`Gasto Uber • ${mesRef}`} value={cmp?.uber.current != null ? brl(cmp.uber.current) : "—"}><Delta c={cmp?.uber} fmt={brl} prev={prev} /></KPI>
+              <KPI label={`Corridas Uber • ${mesRef}`} value={cmp?.corridas.current != null ? num(cmp.corridas.current) : "—"} accent={YELLOW}><Delta c={cmp?.corridas} fmt={num} prev={prev} /></KPI>
+              <KPI label={`Ticket médio • ${mesRef}`} value={cmp?.ticket.current != null ? brl(cmp.ticket.current) : "—"}><Delta c={cmp?.ticket} fmt={brl} prev={prev} /></KPI>
+              <KPI label={`Gasto Viagens • ${mesRef}`} value={cmp?.viagens.current != null ? brl(cmp.viagens.current) : "—"} accent={YELLOW}><Delta c={cmp?.viagens} fmt={brl} prev={prev} /></KPI>
+              <KPI label={`Chamados • ${mesRef}`} value={cmp?.chamados.current != null ? num(cmp.chamados.current) : "—"}><Delta c={cmp?.chamados} fmt={num} prev={prev} goodDown={false} /></KPI>
+              <KPI label={`% Resolução • ${mesRef}`} value={cmp?.resolucao.current != null ? `${cmp.resolucao.current.toFixed(1)}%` : "—"} accent={YELLOW}><Delta c={cmp?.resolucao} fmt={num} prev={prev} goodDown={false} pp /></KPI>
+            </section>
+            <h2 className="pt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Acumulado do ano</h2>
+          </>
+        )}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <KPI label="Gasto Uber" value={brl(totUber)} />
           <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
