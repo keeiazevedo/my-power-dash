@@ -254,3 +254,60 @@ html.dashboard-theme-dark .dashboard-live :is(.text-amber-800, .text-amber-900) 
 @keyframes quiz-shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 @keyframes quiz-fall { to { transform: translateY(420px) rotate(540deg); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .quiz-pop, .quiz-shake, .quiz-confetti span { animation: none; } }
+
+/* Experimento isolado da rota /demonstracao: Corrida Bravante. */
+.demo-runner-stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+.demo-runner-canvas {
+  display: block;
+  width: 100%;
+  height: clamp(280px, 37.5vw, 360px);
+  touch-action: manipulation;
+}
+.demo-runner-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+  backdrop-filter: blur(3px);
+  text-align: center;
+}
+.demo-runner-overlay-content {
+  display: flex;
+  max-width: 30rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+.demo-runner-overlay-content h3 { font-size: 1.25rem; font-weight: 650; }
+.demo-runner-overlay-content p { color: var(--muted-foreground); font-size: 0.875rem; line-height: 1.5; }
+.demo-runner-overlay-content strong { color: var(--foreground); }
+.demo-runner-symbol {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--primary);
+}
+.demo-runner-symbol svg { width: 1.35rem; height: 1.35rem; }
+.demo-runner-score { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) {
+  .demo-runner-symbol { animation: runner-symbol 2.4s ease-in-out infinite; }
+}
+@keyframes runner-symbol {
+  50% { transform: translateY(-3px); box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary) 8%, transparent); }
+}
+@media (max-width: 480px) {
+  .demo-runner-overlay-content { gap: 0.45rem; }
+  .demo-runner-overlay-content p { font-size: 0.78rem; }
+  .demo-runner-symbol { width: 2.25rem; height: 2.25rem; }
+}

@@ -29,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DemoQuiz } from "@/components/dashboard/demo-quiz";
+import { DemoRunner } from "@/components/dashboard/demo-runner";
 import { DemoKpi } from "@/components/dashboard/demo-kpi";
 import { useDashboardData } from "@/lib/dashboard-store";
 import { MESES_ADM, useAdmData } from "@/lib/adm-store";
@@ -44,16 +45,16 @@ import { segColor } from "@/lib/segment-colors";
 export const Route = createFileRoute("/demonstracao")({
   head: () => ({
     meta: [
-      { title: "Prévia de Busca e Parecer Executivo | Bravante" },
+      { title: "Prévia Interativa e Executiva | Bravante" },
       {
         name: "description",
         content:
-          "Demonstração independente de busca de indicadores e parecer executivo calculado sobre os filtros de Saúde e Administrativo Bravante.",
+          "Demonstração independente da Corrida Bravante, quiz, busca de indicadores e parecer executivo sobre os filtros de Saúde e Administrativo.",
       },
-      { property: "og:title", content: "Busca e Parecer Executivo | Bravante" },
+      { property: "og:title", content: "Prévia Interativa e Executiva | Bravante" },
       {
         property: "og:description",
-        content: "Prévia de consulta de indicadores e síntese executiva baseada nos dados de 2026.",
+        content: "Experimente a Corrida Bravante e os recursos interativos sem alterar os dashboards oficiais.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -186,7 +187,7 @@ function DemoPage() {
       {!presenting && (
         <div className="border-b bg-muted/50">
           <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 px-5 py-2 text-xs text-muted-foreground">
-            <span>Prévia · Busca e parecer executivo · 2026</span>
+            <span>Prévia · Mini game e recursos executivos · 2026</span>
             <Button asChild variant="ghost" size="sm">
               <Link to="/">
                 <ArrowLeft />
@@ -227,6 +228,7 @@ function DemoPage() {
         </div>
       </header>
       <main className="mx-auto max-w-[1440px] space-y-7 px-5 py-7 sm:px-8">
+        <DemoRunner />
         <DemoQuiz />
         {!presenting && (
           <div className="flex flex-wrap gap-2" role="group" aria-label="Setor">
