@@ -1,4 +1,5 @@
 import { Download, FileSpreadsheet, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function DashboardEmptyState({
   setorLabel,
@@ -20,27 +21,27 @@ export function DashboardEmptyState({
         Nenhum dado preenchido para {setorLabel} • {ano}
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        Este recorte ainda está com valores zerados. Baixe o modelo Excel padrão para preencher os
+        Este período ainda está com valores zerados. Baixe a planilha base para preencher os
         indicadores mensais ou importe uma planilha já atualizada para visualizar os gráficos e
         destaques executivos.
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        <button
+        <Button
           type="button"
           onClick={onImportClick}
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-primary-foreground shadow-sm transition-opacity hover:opacity-90 cursor-pointer"
         >
           <Upload className="h-4 w-4" />
-          Importar Planilha Excel
-        </button>
-        <button
+          Importar planilha base
+        </Button>
+        <Button variant="outline"
           type="button"
           onClick={onExportTemplate}
-          className="inline-flex items-center gap-2 rounded-lg border border-primary bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-primary shadow-sm transition-colors hover:bg-primary/5 cursor-pointer"
+          className="inline-flex items-center gap-2 rounded-lg border border-primary bg-card px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-primary shadow-sm transition-colors hover:bg-primary/5 cursor-pointer"
         >
           <Download className="h-4 w-4" />
-          Baixar Template ({ano})
-        </button>
+          Baixar planilha base ({ano})
+        </Button>
       </div>
     </div>
   );

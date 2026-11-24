@@ -6,6 +6,7 @@ import {
   formatInt,
   formatPct,
   getPeriodoIndices,
+  isDashboardEmpty,
   type PeriodoId,
 } from "./dashboard-analytics";
 import { admMonths, computeAdmExecutive, computeAdmYear } from "./adm-analytics";
@@ -15,6 +16,7 @@ export type PreviewFilters = {
   sector: "SAUDE" | "ADMINISTRATIVO";
   period: PeriodoId;
   segment: string;
+  year?: string;
 };
 export type PreviewMetric = {
   id: string;
@@ -46,22 +48,24 @@ export const formatMetric = (m: Pick<PreviewMetric, "value" | "kind">) =>
         : formatInt(m.value);
 
 export function previewAnalysis(health: DashboardData, adm: AdmData, filters: PreviewFilters) {
-  const { sector, period, segment } = filters;
+  const { sector, period, segment, year = "2026" } = filters;
   const segments = segment === "TODOS" ? health.segmentos : [segment];
   const available =
     sector === "SAUDE"
-      ? health.meses.slice(
-          0,
-          health.meses.indexOf(
-            computeExecutiveKpis(
-              health,
-              filterDashboardByPeriodo(health, "ANO", health.segmentos),
-              "ANO",
-              "TODOS",
-              health.segmentos,
-            ).refMesAtual,
-          ) + 1,
-        )
+      ? isDashboardEmpty(health)
+        ? []
+        : health.meses.slice(
+            0,
+            health.meses.indexOf(
+              computeExecutiveKpis(
+                health,
+                filterDashboardByPeriodo(health, "ANO", health.segmentos),
+                "ANO",
+                "TODOS",
+                health.segmentos,
+              ).refMesAtual,
+            ) + 1,
+          )
       : admMonths(adm);
   const calendar =
     sector === "SAUDE"
@@ -71,7 +75,7 @@ export function previewAnalysis(health: DashboardData, adm: AdmData, filters: Pr
     .map((i) => calendar[i])
     .filter((m): m is string => typeof m === "string" && available.includes(m));
   const scope = segment === "TODOS" ? "Todos os segmentos" : segment;
-  const context = `${sector === "SAUDE" ? "Saúde" : "Administrativo"} · 2026 · ${months[0] ?? "—"}–${months.at(-1) ?? "—"} · ${scope}`;
+  const context = `${sector === "SAUDE" ? "Saúde" : "Administrativo"} · ${year} · ${months[0] ?? "—"}–${months.at(-1) ?? "—"} · ${scope}`;
   const points = (get: (m: string) => number) => months.map((mes) => ({ mes, valor: get(mes) }));
   const metrics: PreviewMetric[] = [];
   const paragraphs: string[] = [];
@@ -90,7 +94,7 @@ export function previewAnalysis(health: DashboardData, adm: AdmData, filters: Pr
   const month = months.at(-1);
   if (!month) return { metrics, paragraphs, context, months, empty: true };
   if (sector === "SAUDE") {
-    // Clip unfilled trailing months for this preview only; source data is never changed.
+    // Clip unfilled trailing months for descriptive reports only; source data is never changed.
     const filtered = filterDashboardByPeriodo(health, period, segments);
     const clip = <T extends Record<string, string | number>>(rows: T[]) =>
       rows.filter((r) => months.includes(String(r["mes"])));

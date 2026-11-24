@@ -46,3 +46,24 @@ test("analysis never mutates the imported datasets", () => {
   run("ADMINISTRATIVO", "T2");
   expect(JSON.stringify({ health, adm })).toBe(before);
 });
+test("official reports use selected year data and reject an empty year", () => {
+  const data2025 = baseDataFor("SAUDE", "2025");
+  const report = previewAnalysis(data2025, adm, {
+    sector: "SAUDE",
+    period: "ANO",
+    segment: "TODOS",
+    year: "2025",
+  });
+  expect(report.metrics.find((m) => m.id === "aso")?.value).toBe(
+    data2025.asoPeriodicoPrevReal.reduce((s, r) => s + r.REALIZADOS, 0),
+  );
+  expect(report.context.split(" · ")[1]).toBe("2025");
+  expect(
+    previewAnalysis(baseDataFor("SAUDE", "2027"), baseAdm("2027"), {
+      sector: "SAUDE",
+      period: "ANO",
+      segment: "TODOS",
+      year: "2027",
+    }).empty,
+  ).toBe(true);
+});

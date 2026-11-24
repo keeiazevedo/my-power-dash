@@ -35,7 +35,7 @@ export function KpiCard({
         : ArrowRight;
 
   return (
-    <div className="kpi-card group relative min-w-0 flex flex-col justify-between rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md break-inside-avoid">
+    <div data-indicator={label} className="kpi-card group relative min-w-0 flex flex-col justify-between rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md break-inside-avoid">
       <div>
         <div className="flex items-start justify-between gap-2">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">

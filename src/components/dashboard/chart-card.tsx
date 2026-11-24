@@ -19,7 +19,7 @@ export function ChartCard({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("rounded-xl border bg-card p-4 shadow-sm break-inside-avoid", className)}>
+    <div data-indicator={title} className={cn("rounded-xl border bg-card p-4 shadow-sm break-inside-avoid", className)}>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div className="border-l-4 border-primary pl-3">
           <div className="flex flex-wrap items-center gap-2">

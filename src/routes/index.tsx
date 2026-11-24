@@ -79,6 +79,9 @@ import {
 import { DashboardExperience, DashboardDisplayControls } from "@/components/dashboard/dashboard-experience";
 import { KpiSeriesContext, type KpiPoint } from "@/components/dashboard/kpi-sparkline";
 import { healthMonthInsights } from "@/lib/health-month-insights";
+import { DashboardAssistant } from "@/components/dashboard/dashboard-assistant";
+import { HEALTH_INDICATORS } from "@/lib/indicator-search";
+import { Button } from "@/components/ui/button";
 
 const ANOS = ["2025", "2026", "2027"];
 
@@ -931,24 +934,24 @@ function SaudeDashboard({
                 if (f) handleImport(f);
               }}
             />
-            <button
+            <Button variant="outline"
               type="button"
               onClick={handleExportTemplate}
               className="inline-flex items-center gap-1.5 rounded-lg border border-primary bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary shadow-xs transition-colors hover:bg-primary/5 cursor-pointer"
             >
               <Download className="h-3.5 w-3.5" />
-              Baixar template
-            </button>
-            <button
+              Baixar planilha base
+            </Button>
+            <Button
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={importing}
               className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary-foreground shadow-xs transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer"
             >
               <Upload className="h-3.5 w-3.5" />
-              {importing ? "Importando..." : "Importar Excel"}
-            </button>
-            <button
+              {importing ? "Importando..." : "Importar planilha base"}
+            </Button>
+            <Button variant="outline"
               type="button"
               onClick={() => window.print()}
               className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-foreground shadow-xs transition-colors hover:bg-muted cursor-pointer"
@@ -956,7 +959,7 @@ function SaudeDashboard({
             >
               <Printer className="h-3.5 w-3.5 text-muted-foreground" />
               PDF / Imprimir
-            </button>
+            </Button>
 
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -1110,6 +1113,7 @@ function SaudeDashboard({
 
       {/* Main Content */}
       <main className="mx-auto max-w-[1400px] space-y-6 px-4 py-6">
+        <DashboardAssistant sector="SAUDE" data={data} year={ano} period={periodoAtual.id} segment={segAtivo} indicators={HEALTH_INDICATORS} onNavigate={v => setActiveTab(v as TabValue)} />
         {empty ? (
           <DashboardEmptyState
             setorLabel={setorLabel}

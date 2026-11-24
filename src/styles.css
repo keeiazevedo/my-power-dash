@@ -194,6 +194,11 @@ html.dashboard-theme-dark {
 }
 
 .dashboard-live { letter-spacing: 0; }
+.dashboard-live [data-indicator][data-search-highlight] {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  scroll-margin-top: 8rem;
+}
 .dashboard-live:fullscreen { overflow-y: auto; }
 .dashboard-presenting .presentation-tools { display: none !important; }
 .dashboard-presenting .kpi-value { font-size: 2.25rem; }

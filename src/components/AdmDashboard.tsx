@@ -3,7 +3,7 @@ import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, ComposedChart,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
 } from "recharts";
-import { Calendar, Filter, X, LayoutDashboard, Car, Plane, Headset, Layers } from "lucide-react";
+import { Calendar, Filter, X, LayoutDashboard, Car, Plane, Headset, Layers, Download, Upload, Printer } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPeriodoOptions, getPeriodoIndices, type PeriodoId } from "@/lib/dashboard-analytics";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
@@ -13,6 +13,9 @@ import { useAdmData, importAdm, exportAdm, MESES_ADM, SEGMENTOS_ADM, ANOS_ADM } 
 
 import { DashboardDisplayControls } from "@/components/dashboard/dashboard-experience";
 import { KpiSeriesContext, KpiSparkline } from "@/components/dashboard/kpi-sparkline";
+import { DashboardAssistant } from "@/components/dashboard/dashboard-assistant";
+import { ADM_INDICATORS } from "@/lib/indicator-search";
+import { Button } from "@/components/ui/button";
 
 const GREEN = "#007A4D", GREEN_80 = "#3BA27E", GREEN_60 = "#5CAF8F", GREEN_45 = "#87C3A9", GREEN_MARK = "#4E7F71";
 const YELLOW = "#EAA921", YELLOW_80 = "#F2B844", YELLOW_65 = "#F8C66B", YELLOW_45 = "#FFD796", GRAY = "#B6B6B6";
@@ -24,7 +27,7 @@ const xMes = { dataKey: "mes", tick: { fontSize: 11 }, interval: 0 as const };
 
 function Card({ title, subtitle, children, className = "" }: { title: string; subtitle?: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border bg-card p-4 shadow-sm ${className}`}>
+    <div data-indicator={title} className={`rounded-xl border bg-card p-4 shadow-sm break-inside-avoid ${className}`}>
       <div className="mb-3 border-l-4 border-primary pl-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground">{title}</h3>
         {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
@@ -43,7 +46,7 @@ function Delta({ c, fmt, prev, goodDown = true, pp }: { c?: AdmComparison; fmt: 
 }
 function KPI({ label, value, accent = GREEN, children }: { label: string; value: string | number; accent?: string; children?: React.ReactNode }) {
   return (
-    <div className="kpi-card rounded-xl border bg-card p-4 shadow-sm min-w-0">
+    <div data-indicator={label} className="kpi-card rounded-xl border bg-card p-4 shadow-sm min-w-0 break-inside-avoid">
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="kpi-value mt-1 break-words text-2xl font-bold" style={{ color: accent === YELLOW ? "var(--secondary)" : "var(--primary)" }}>{value}</div>
       <KpiSparkline label={label} accent={accent === YELLOW} />
@@ -187,7 +190,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
             <div>
               <h1 className="text-xl font-bold text-foreground sm:text-2xl">Dashboard Administrativo • {ano}</h1>
               <p className="text-xs text-muted-foreground">Uber, viagens e chamados por mês e segmento</p>
-              <div className="presentation-tools mt-2 flex flex-wrap gap-1">
+              <div className="presentation-tools no-print mt-2 flex flex-wrap gap-1">
                 {header}
                 <span className="mx-1 w-px bg-border" />
                 {ANOS_ADM.map((a) => (
@@ -201,10 +204,11 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
             <DashboardDisplayControls />
           <div className="presentation-tools no-print flex flex-wrap items-center gap-2">
             <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f); }} />
-            <button onClick={() => exportAdm(data, `base-administrativo-${ano}.xlsx`)}
-              className="rounded-md border border-primary bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary shadow-sm hover:bg-primary/5">Baixar planilha base</button>
-            <button onClick={() => fileRef.current?.click()} disabled={busy}
-              className="rounded-md bg-primary px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50">{busy ? "Importando..." : "Importar planilha base"}</button>
+            <Button variant="outline" onClick={() => exportAdm(data, `base-administrativo-${ano}.xlsx`)}
+              className="border-primary text-xs font-semibold uppercase text-primary"><Download className="size-3.5" />Baixar planilha base</Button>
+            <Button onClick={() => fileRef.current?.click()} disabled={busy}
+              className="text-xs font-semibold uppercase"><Upload className="size-3.5" />{busy ? "Importando..." : "Importar planilha base"}</Button>
+            <Button variant="outline" onClick={() => window.print()} title="Imprimir aba atual ou salvar como PDF" className="text-xs font-semibold uppercase"><Printer className="size-3.5 text-muted-foreground" />PDF / Imprimir</Button>
             <button onClick={() => { if (confirm("Restaurar dados iniciais?")) { reset(); setMsg("Dados restaurados."); } }}
               className="rounded-md border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm hover:bg-muted">Restaurar</button>
           </div>
@@ -247,6 +251,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
       </div>
 
       <main className="mx-auto max-w-[1400px] space-y-6 px-4 py-6">
+        <DashboardAssistant sector="ADMINISTRATIVO" data={data} year={ano} period={periodo} segment={seg} indicators={ADM_INDICATORS} onNavigate={setTab} />
         <Tabs value={tab} onValueChange={setTab} className="space-y-6">
           <div className="presentation-tools no-print overflow-x-auto pb-1">
             <TabsList className="inline-flex h-auto min-w-max flex-wrap justify-start gap-1 rounded-xl bg-muted/80 p-1.5">
