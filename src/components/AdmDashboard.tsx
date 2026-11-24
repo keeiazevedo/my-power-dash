@@ -8,11 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPeriodoOptions, getPeriodoIndices, type PeriodoId } from "@/lib/dashboard-analytics";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
 import { admMonths, computeAdmExecutive, computeAdmYear, type AdmComparison } from "@/lib/adm-analytics";
+import { segColor } from "@/lib/segment-colors";
 import { useAdmData, importAdm, exportAdm, MESES_ADM, SEGMENTOS_ADM, ANOS_ADM } from "@/lib/adm-store";
 
 const GREEN = "#007A4D", GREEN_80 = "#3BA27E", GREEN_60 = "#5CAF8F", GREEN_45 = "#87C3A9", GREEN_MARK = "#4E7F71";
 const YELLOW = "#EAA921", YELLOW_80 = "#F2B844", YELLOW_65 = "#F8C66B", YELLOW_45 = "#FFD796", GRAY = "#B6B6B6";
-const SEG_COLORS: Record<string, string> = { AMBIENTAL: GREEN, BUNKER: YELLOW, OFFSHORE: GREEN_80, ESTALEIRO: YELLOW_80, CORPORATIVO: GRAY };
 const PALETTE = [GREEN, YELLOW, GREEN_80, YELLOW_80, GREEN_60, YELLOW_65, GREEN_45, YELLOW_45, GREEN_MARK, GRAY];
 const tip = { backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 12 };
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -140,7 +140,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
         <YAxis tick={{ fontSize: 11 }} tickFormatter={money ? kfmt : undefined} />
         <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => (money ? brl(v) : v)} />
         <Legend wrapperStyle={{ fontSize: 11 }} />
-        {segList.map((s) => <Bar key={s} dataKey={s} stackId="a" fill={SEG_COLORS[s]} />)}
+        {segList.map((s) => <Bar key={s} dataKey={s} stackId="a" fill={segColor(s)} />)}
       </BarChart>
     </ResponsiveContainer>
   );
@@ -148,7 +148,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
     <ResponsiveContainer>
       <PieChart>
         <Pie data={rows} dataKey="value" nameKey="name" innerRadius={45} outerRadius={90} paddingAngle={2}>
-          {rows.map((r, i) => <Cell key={r.name} fill={(seg && SEG_COLORS[r.name]) || PALETTE[i % PALETTE.length]} />)}
+          {rows.map((r, i) => <Cell key={r.name} fill={seg ? segColor(r.name) : PALETTE[i % PALETTE.length]} />)}
         </Pie>
         <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
         <Legend wrapperStyle={{ fontSize: 11 }} />

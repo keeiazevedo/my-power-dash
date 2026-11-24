@@ -96,6 +96,7 @@ export const Route = createFileRoute("/")({
   component: DashboardPage,
 });
 
+import { segColor } from "@/lib/segment-colors";
 const GREEN = "#007A4D";
 const GREEN_80 = "#3BA27E";
 const GREEN_60 = "#5CAF8F";
@@ -107,13 +108,7 @@ const YELLOW_65 = "#F8C66B";
 const YELLOW_45 = "#FFD796";
 const GRAY = "#B6B6B6";
 
-const SEG_COLORS: Record<string, string> = {
-  AMBIENTAL: GREEN,
-  BUNKER: YELLOW,
-  OFFSHORE: GREEN_80,
-  ESTALEIRO: YELLOW_80,
-  CORPORATIVO: GRAY,
-};
+
 
 const STATUS_COLORS: Record<string, string> = {
   LIMBO: YELLOW,
@@ -451,7 +446,7 @@ function SaudeDashboard({
             {catSegFiltrado.map((r, i) => (
               <Cell
                 key={r.segmento}
-                fill={SEG_COLORS[r.segmento] ?? PIE_COLORS[i % PIE_COLORS.length]}
+                fill={segColor(r.segmento)}
                 stroke={segAtivo === r.segmento ? "#111827" : "#ffffff"}
                 strokeWidth={segAtivo === r.segmento ? 2 : 1}
               />
@@ -578,7 +573,7 @@ function SaudeDashboard({
               key={s}
               dataKey={s}
               stackId="a"
-              fill={SEG_COLORS[s] ?? PIE_COLORS[idx % PIE_COLORS.length]}
+              fill={segColor(s)}
               radius={idx === segList.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
             />
           ))}
@@ -618,7 +613,7 @@ function SaudeDashboard({
               key={s}
               type="monotone"
               dataKey={s}
-              stroke={SEG_COLORS[s] ?? PIE_COLORS[idx % PIE_COLORS.length]}
+              stroke={segColor(s)}
               strokeWidth={2.2}
               dot={{ r: 3 }}
             />
@@ -646,7 +641,7 @@ function SaudeDashboard({
               key={s}
               dataKey={s}
               stackId="a"
-              fill={SEG_COLORS[s] ?? PIE_COLORS[idx % PIE_COLORS.length]}
+              fill={segColor(s)}
               radius={idx === segList.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
             />
           ))}
@@ -703,8 +698,8 @@ function SaudeDashboard({
               type="monotone"
               dataKey={s}
               stackId="1"
-              stroke={SEG_COLORS[s] ?? PIE_COLORS[idx % PIE_COLORS.length]}
-              fill={SEG_COLORS[s] ?? PIE_COLORS[idx % PIE_COLORS.length]}
+              stroke={segColor(s)}
+              fill={segColor(s)}
               fillOpacity={0.7}
             />
           ))}
