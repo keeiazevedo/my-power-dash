@@ -117,6 +117,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
   const totUber = uber.reduce((a, r) => a + r.valor, 0);
   const totCorr = uber.reduce((a, r) => a + r.corridas, 0);
   const totVia = via.reduce((a, r) => a + r.valor, 0);
+  const totQtd = via.reduce((a, r) => a + (r.quantidade ?? 0), 0);
   const totCh = chamadosRows.reduce((a, r) => a + r.total, 0);
   const totSol = chamadosRows.reduce((a, r) => a + r.solucionados, 0);
 
@@ -238,30 +239,46 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
               <span className="text-xs text-muted-foreground">{prev ? `comparado com ${prev}` : "sem mês anterior para comparar"} • {sub}</span>
             </div>
             <InsightsPanel insights={exec.insights} periodoLabel={`${mesRef}/${ano}`} />
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <KPI label={`Gasto Uber • ${mesRef}`} value={cmp?.uber.current != null ? brl(cmp.uber.current) : "—"}><Delta c={cmp?.uber} fmt={brl} prev={prev} /></KPI>
-              <KPI label={`Corridas Uber • ${mesRef}`} value={cmp?.corridas.current != null ? num(cmp.corridas.current) : "—"} accent={YELLOW}><Delta c={cmp?.corridas} fmt={num} prev={prev} /></KPI>
-              <KPI label={`Ticket médio • ${mesRef}`} value={cmp?.ticket.current != null ? brl(cmp.ticket.current) : "—"}><Delta c={cmp?.ticket} fmt={brl} prev={prev} /></KPI>
-              <KPI label={`Gasto Viagens • ${mesRef}`} value={cmp?.viagens.current != null ? brl(cmp.viagens.current) : "—"} accent={YELLOW}><Delta c={cmp?.viagens} fmt={brl} prev={prev} /></KPI>
-              <KPI label={`Chamados • ${mesRef}`} value={cmp?.chamados.current != null ? num(cmp.chamados.current) : "—"}><Delta c={cmp?.chamados} fmt={num} prev={prev} goodDown={false} /></KPI>
-              <KPI label={`% Resolução • ${mesRef}`} value={cmp?.resolucao.current != null ? `${cmp.resolucao.current.toFixed(1)}%` : "—"} accent={YELLOW}><Delta c={cmp?.resolucao} fmt={num} prev={prev} goodDown={false} pp /></KPI>
-            </section>
+            <div className="space-y-4">
+              <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <KPI label={`Chamados Administrativos • ${mesRef}`} value={cmp?.chamados.current != null ? num(cmp.chamados.current) : "—"}><Delta c={cmp?.chamados} fmt={num} prev={prev} goodDown={false} /></KPI>
+                <KPI label={`Taxa de Resolução • ${mesRef}`} value={cmp?.resolucao.current != null ? `${cmp.resolucao.current.toFixed(1)}%` : "—"} accent={YELLOW}><Delta c={cmp?.resolucao} fmt={num} prev={prev} goodDown={false} pp /></KPI>
+              </section>
+              <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <KPI label={`Custo Uber • ${mesRef}`} value={cmp?.uber.current != null ? brl(cmp.uber.current) : "—"}><Delta c={cmp?.uber} fmt={brl} prev={prev} /></KPI>
+                <KPI label={`Corridas Uber • ${mesRef}`} value={cmp?.corridas.current != null ? num(cmp.corridas.current) : "—"} accent={YELLOW}><Delta c={cmp?.corridas} fmt={num} prev={prev} /></KPI>
+                <KPI label={`Ticket Médio Uber • ${mesRef}`} value={cmp?.ticket.current != null ? brl(cmp.ticket.current) : "—"}><Delta c={cmp?.ticket} fmt={brl} prev={prev} /></KPI>
+              </section>
+              <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <KPI label={`Custo Viagens • ${mesRef}`} value={cmp?.viagens.current != null ? brl(cmp.viagens.current) : "—"} accent={YELLOW}><Delta c={cmp?.viagens} fmt={brl} prev={prev} /></KPI>
+                <KPI label={`Quantidade de Viagens • ${mesRef}`} value={cmp?.qtdViagens.current != null ? num(cmp.qtdViagens.current) : "—"}>{cmp?.qtdViagens.current != null ? <Delta c={cmp?.qtdViagens} fmt={num} prev={prev} /> : <div className="mt-1 text-[11px] text-muted-foreground">Preencha na planilha base</div>}</KPI>
+                <KPI label={`Ticket Médio Viagens • ${mesRef}`} value={cmp?.ticketViagens.current != null ? brl(cmp.ticketViagens.current) : "—"} accent={YELLOW}>{cmp?.ticketViagens.current != null ? <Delta c={cmp?.ticketViagens} fmt={brl} prev={prev} /> : <div className="mt-1 text-[11px] text-muted-foreground">Depende da quantidade de viagens</div>}</KPI>
+              </section>
+            </div>
             <h2 className="pt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Acumulado • {periodoAtual.shortLabel}</h2>
           </>
         )}
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <KPI label="Gasto Uber" value={brl(totUber)} />
-          <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
-          <KPI label="Ticket médio Uber" value={brl(totCorr ? totUber / totCorr : 0)} />
-          <KPI label="Gasto Viagens" value={brl(totVia)} accent={YELLOW} />
-          <KPI label="Chamados Administrativo" value={totCh.toLocaleString("pt-BR")} />
-          <KPI label="% Resolução" value={`${totCh ? ((totSol / totCh) * 100).toFixed(1) : 0}%`} accent={YELLOW} />
-        </section>
+        <div className="space-y-4">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <KPI label="Chamados Administrativos" value={totCh.toLocaleString("pt-BR")} />
+            <KPI label="Taxa de Resolução" value={`${totCh ? ((totSol / totCh) * 100).toFixed(1) : 0}%`} accent={YELLOW} />
+          </section>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <KPI label="Custo Uber" value={brl(totUber)} />
+            <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
+            <KPI label="Ticket Médio Uber" value={brl(totCorr ? totUber / totCorr : 0)} />
+          </section>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <KPI label="Custo Viagens" value={brl(totVia)} accent={YELLOW} />
+            <KPI label="Quantidade de Viagens" value={totQtd ? totQtd.toLocaleString("pt-BR") : "—"} />
+            <KPI label="Ticket Médio Viagens" value={totQtd ? brl(totVia / totQtd) : "—"} accent={YELLOW} />
+          </section>
+        </div>
 
           </TabsContent>
           <TabsContent value="uber" className="space-y-6">
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Gasto Uber por Mês" subtitle={sub}>{segBars(uberValorMes, true)}</Card>
+          <Card title="Custo Uber por Mês" subtitle={sub}>{segBars(uberValorMes, true)}</Card>
           <Card title="Corridas Uber por Mês" subtitle={sub}>{segBars(uberCorridasMes, false)}</Card>
         </section>
 
@@ -294,7 +311,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
           </TabsContent>
           <TabsContent value="viagens" className="space-y-6">
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Gasto com Viagens por Mês" subtitle={sub}>{segBars(viaValorMes, true)}</Card>
+          <Card title="Custo com Viagens por Mês" subtitle={sub}>{segBars(viaValorMes, true)}</Card>
           <Card title="Viagens por Produto (Top 5)" subtitle={sub}>
             <ResponsiveContainer>
               <LineChart data={viaProdMes}>
@@ -346,17 +363,25 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
 
           </TabsContent>
           <TabsContent value="visao-completa" className="space-y-6">
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <KPI label="Gasto Uber" value={brl(totUber)} />
-          <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
-          <KPI label="Ticket médio Uber" value={brl(totCorr ? totUber / totCorr : 0)} />
-          <KPI label="Gasto Viagens" value={brl(totVia)} accent={YELLOW} />
-          <KPI label="Chamados Administrativo" value={totCh.toLocaleString("pt-BR")} />
-          <KPI label="% Resolução" value={`${totCh ? ((totSol / totCh) * 100).toFixed(1) : 0}%`} accent={YELLOW} />
-        </section>
+        <div className="space-y-4">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <KPI label="Chamados Administrativos" value={totCh.toLocaleString("pt-BR")} />
+            <KPI label="Taxa de Resolução" value={`${totCh ? ((totSol / totCh) * 100).toFixed(1) : 0}%`} accent={YELLOW} />
+          </section>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <KPI label="Custo Uber" value={brl(totUber)} />
+            <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
+            <KPI label="Ticket Médio Uber" value={brl(totCorr ? totUber / totCorr : 0)} />
+          </section>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <KPI label="Custo Viagens" value={brl(totVia)} accent={YELLOW} />
+            <KPI label="Quantidade de Viagens" value={totQtd ? totQtd.toLocaleString("pt-BR") : "—"} />
+            <KPI label="Ticket Médio Viagens" value={totQtd ? brl(totVia / totQtd) : "—"} accent={YELLOW} />
+          </section>
+        </div>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Gasto Uber por Mês" subtitle={sub}>{segBars(uberValorMes, true)}</Card>
+          <Card title="Custo Uber por Mês" subtitle={sub}>{segBars(uberValorMes, true)}</Card>
           <Card title="Corridas Uber por Mês" subtitle={sub}>{segBars(uberCorridasMes, false)}</Card>
         </section>
 
@@ -387,7 +412,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
         </section>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Gasto com Viagens por Mês" subtitle={sub}>{segBars(viaValorMes, true)}</Card>
+          <Card title="Custo com Viagens por Mês" subtitle={sub}>{segBars(viaValorMes, true)}</Card>
           <Card title="Viagens por Produto (Top 5)" subtitle={sub}>
             <ResponsiveContainer>
               <LineChart data={viaProdMes}>

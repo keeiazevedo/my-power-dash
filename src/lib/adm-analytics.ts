@@ -2,7 +2,7 @@ import type { AdmData } from "./adm-store";
 import type { InsightItem } from "./dashboard-analytics";
 
 const MONTHS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
-export type AdmMetric = "uber" | "corridas" | "ticket" | "viagens" | "chamados" | "resolucao";
+export type AdmMetric = "uber" | "corridas" | "ticket" | "viagens" | "qtdViagens" | "ticketViagens" | "chamados" | "resolucao";
 export type AdmComparison = {
   current: number | null;
   previous: number | null;
@@ -30,12 +30,15 @@ function monthMetrics(data: AdmData, month: string, segment: string): Record<Adm
   const chamados = data.chamados.filter(r => r.mes === month);
   const cost = uber.reduce((s, r) => s + r.valor, 0);
   const rides = uber.reduce((s, r) => s + r.corridas, 0);
+  const trips = viagens.reduce((s, r) => s + (r.quantidade ?? 0), 0);
   const total = chamados.reduce((s, r) => s + r.total, 0);
   return {
     uber: uber.length ? cost : null,
     corridas: uber.length ? rides : null,
     ticket: uber.length && rides > 0 ? cost / rides : null,
     viagens: viagens.length ? viagens.reduce((s, r) => s + r.valor, 0) : null,
+    qtdViagens: trips > 0 ? trips : null,
+    ticketViagens: trips > 0 ? viagens.reduce((s, r) => s + r.valor, 0) / trips : null,
     chamados: chamados.length ? total : null,
     resolucao: chamados.length && total > 0 ? chamados.reduce((s, r) => s + r.solucionados, 0) / total * 100 : null,
   };
@@ -53,7 +56,7 @@ export function computeAdmExecutive(data: AdmData, segment: string, month: strin
     if (c.delta === null || c.current === null || c.previous === null) {
       insights.push({ id: key, tone: "neutral", title: `${name}: comparação indisponível`, description: `Sem registros para ${c.current === null ? month : previousMonth ?? "o mês anterior"} no recorte selecionado.` });
     } else {
-      insights.push({ id: key, tone: c.delta > 0 ? "warning" : c.delta < 0 ? "positive" : "neutral", title: `${name}: ${c.delta > 0 ? "aumento" : c.delta < 0 ? "redução" : "estabilidade"} dos gastos`, description: `${money(c.current)} em ${month}; ${c.delta === 0 ? "mesmo valor de" : `${money(Math.abs(c.delta))} ${c.delta > 0 ? "a mais" : "a menos"} que`} ${previousMonth}${c.percent === null ? "." : ` (${pct(c.percent)}%).`}` });
+      insights.push({ id: key, tone: c.delta > 0 ? "warning" : c.delta < 0 ? "positive" : "neutral", title: `${name}: ${c.delta > 0 ? "aumento" : c.delta < 0 ? "redução" : "estabilidade"} dos custos`, description: `${money(c.current)} em ${month}; ${c.delta === 0 ? "mesmo valor de" : `${money(Math.abs(c.delta))} ${c.delta > 0 ? "a mais" : "a menos"} que`} ${previousMonth}${c.percent === null ? "." : ` (${pct(c.percent)}%).`}` });
     }
   }
 
@@ -68,7 +71,7 @@ export function computeAdmExecutive(data: AdmData, segment: string, month: strin
     const largest = increases[0];
     insights.push(largest
       ? { id: "segmento", tone: "warning", title: `Maior aumento: ${largest.segment}`, description: `${money(largest.delta)} a mais em Uber e viagens, de ${previousMonth} para ${month}, entre segmentos com registros das duas despesas nos dois meses.` }
-      : { id: "segmento", tone: "neutral", title: "Gastos por segmento", description: "Nenhum aumento combinado identificado entre segmentos com registros de Uber e viagens nos dois meses." });
+      : { id: "segmento", tone: "neutral", title: "Custos por segmento", description: "Nenhum aumento combinado identificado entre segmentos com registros de Uber e viagens nos dois meses." });
   }
   const resolution = comparisons.resolucao;
   insights.push(resolution.delta === null || resolution.current === null

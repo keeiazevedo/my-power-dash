@@ -7,7 +7,7 @@ export const SEGMENTOS_ADM = ["AMBIENTAL", "BUNKER", "CORPORATIVO", "ESTALEIRO",
 export const ANOS_ADM = ["2026", "2027", "2028"];
 
 export type UberRow = { mes: string; segmento: string; servico: string; valor: number; corridas: number };
-export type ViagemRow = { mes: string; segmento: string; produto: string; valor: number };
+export type ViagemRow = { mes: string; segmento: string; produto: string; valor: number; quantidade?: number };
 export type ChamadoRow = { mes: string; solucionados: number; total: number };
 export type AdmData = { uber: UberRow[]; viagens: ViagemRow[]; chamados: ChamadoRow[] };
 
@@ -63,6 +63,8 @@ export async function importAdm(file: File): Promise<AdmData> {
     const k = `${mes}|${segmento}|${produto}`;
     const cur = viaMap.get(k) ?? { mes, segmento, produto, valor: 0 };
     cur.valor += num(pick(r, "Soma de Total Cliente", "Total Cliente", "Valor"));
+    const q = pick(r, "Quantidade de Viagens", "Quantidade", "Qtd");
+    if (q !== "" && q !== undefined && q !== null) cur.quantidade = (cur.quantidade ?? 0) + num(q);
     viaMap.set(k, cur);
   }
 
@@ -90,7 +92,7 @@ export function exportAdm(d: AdmData, fileName: string) {
   }))), "Uber");
   const via = d.viagens.length ? d.viagens : [{ mes: "JAN", segmento: "OFFSHORE", produto: "AÉREO", valor: 0 }];
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(via.map((r) => ({
-    "Área": r.segmento, "Ref Mês": nome(r.mes), "Produto Final": r.produto, "Soma de Total Cliente": +r.valor.toFixed(2),
+    "Área": r.segmento, "Ref Mês": nome(r.mes), "Produto Final": r.produto, "Soma de Total Cliente": +r.valor.toFixed(2), "Quantidade de Viagens": r.quantidade ?? "",
   }))), "Planilha5");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(MESES_ADM.map((m) => {
     const c = d.chamados.find((x) => x.mes === m);
