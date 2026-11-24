@@ -43,12 +43,15 @@ export type DashboardData = {
   qualidadeVidaResumo: { previstaAno: number; realizadaAno: number; taxa: number };
   testesAlcoolDrogas?: { mes: string; quantidade: number }[];
   atendimentosSociais?: { mes: string; quantidade: number }[];
+  /** ASO periódicos ainda pendentes no ano (somados ao previsto anual). */
+  asoPendentes?: number;
 };
 
 /** Valores iniciais de 2026 (acumulado do ano). */
 export const INDICADORES_2026 = {
   testesAlcoolDrogas: [{ mes: "ACUMULADO 2026", quantidade: 1195 }],
   atendimentosSociais: [{ mes: "ACUMULADO 2026", quantidade: 411 }],
+  asoPendentes: 272,
 };
 
 export const somaQtd = (rows?: { quantidade: number }[]) =>
@@ -99,6 +102,7 @@ const SHEETS = {
   QV_RESUMO: "QV Resumo",
   TESTES_AD: "Testes Álcool e Drogas",
   SOCIAL: "Atendimentos Sociais",
+  ASO_PENDENTES: "ASO Pendentes",
 } as const;
 
 function toNum(v: unknown): number {
@@ -131,6 +135,7 @@ export function buildDashboardWorkbook(data: DashboardData) {
   add(SHEETS.LIMBO, data.limboPrevidenciario);
   add(SHEETS.QV, data.qualidadeVida);
   add(SHEETS.QV_RESUMO, [data.qualidadeVidaResumo]);
+  add(SHEETS.ASO_PENDENTES, [{ indicador: "ASO periódicos pendentes no ano", quantidade: data.asoPendentes ?? 0 }]);
   const qtdRows = (r?: { mes: string; quantidade: number }[]) =>
     r && r.length ? r : MESES.map((mes) => ({ mes, quantidade: 0 }));
   add(SHEETS.TESTES_AD, qtdRows(data.testesAlcoolDrogas));
@@ -224,6 +229,9 @@ export async function importFromExcel(file: File): Promise<DashboardData> {
   const testesAd = readQtd(SHEETS.TESTES_AD);
   const social = readQtd(SHEETS.SOCIAL);
 
+  const asoPendRow = readSheet(SHEETS.ASO_PENDENTES)[0];
+  const asoPendentes = asoPendRow ? toNum(asoPendRow.quantidade) : undefined;
+
   const qvResRow = readSheet(SHEETS.QV_RESUMO)[0] ?? {};
   const qvResumo = {
     previstaAno: toNum(qvResRow.previstaAno),
@@ -262,6 +270,7 @@ export async function importFromExcel(file: File): Promise<DashboardData> {
     qualidadeVidaResumo: qvResRow && Object.keys(qvResRow).length ? qvResumo : defaultData.qualidadeVidaResumo,
     testesAlcoolDrogas: testesAd,
     atendimentosSociais: social,
+    ...(asoPendentes !== undefined ? { asoPendentes } : {}),
   };
 }
 
@@ -331,6 +340,7 @@ export function useDashboardData(setor: string, ano: string) {
           ...saved,
           testesAlcoolDrogas: saved.testesAlcoolDrogas?.length ? saved.testesAlcoolDrogas : next.testesAlcoolDrogas,
           atendimentosSociais: saved.atendimentosSociais?.length ? saved.atendimentosSociais : next.atendimentosSociais,
+          ...((saved.asoPendentes ?? next.asoPendentes) !== undefined ? { asoPendentes: saved.asoPendentes ?? next.asoPendentes } : {}),
         };
       }
     } catch {

@@ -265,7 +265,9 @@ export function computeExecutiveKpis(
   const refMesAtual = data.meses[activeIdx] ?? "";
   const prevMesName = prevIdx >= 0 ? (data.meses[prevIdx] ?? "") : "";
 
-  const asoPrevisto = filtered.asoPeriodicoPrevReal.reduce((s, r) => s + r.PREVISTOS, 0);
+  const asoPrevisto =
+    filtered.asoPeriodicoPrevReal.reduce((s, r) => s + r.PREVISTOS, 0) +
+    (periodo === "ANO" ? (data.asoPendentes ?? 0) : 0);
   const asoRealizado = filtered.asoPeriodicoPrevReal.reduce((s, r) => s + r.REALIZADOS, 0);
   const asoTaxaPct = asoPrevisto > 0 ? (asoRealizado / asoPrevisto) * 100 : 0;
   const asoTrend =

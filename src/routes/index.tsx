@@ -353,7 +353,7 @@ function SaudeDashboard({
     <ChartCard
       title="ASO Periódico - Previsto x Realizado"
       subtitle={`Evolução mensal • ${periodoAtual.shortLabel}`}
-      badge={scopeEmpresaBadge ?? `${formatPct(kpis.asoTaxaPct, 0)} realizado`}
+      badge={scopeEmpresaBadge ?? `${formatPct(kpis.asoTaxaPct, 1)} realizado de 100%`}
     >
       <ResponsiveContainer>
         <BarChart data={filtered.asoPeriodicoPrevReal}>
@@ -795,7 +795,7 @@ function SaudeDashboard({
       <KpiCard
         label="ASO Periódico"
         value={formatInt(kpis.asoRealizado)}
-        sublabel={`Previsto: ${formatInt(kpis.asoPrevisto)} (${formatPct(kpis.asoTaxaPct, 0)} adesão)`}
+        sublabel={`Previsto: ${formatInt(kpis.asoPrevisto)} • ${formatPct(kpis.asoTaxaPct, 1)} realizado de 100%`}
         icon={UserCheck}
         accent={GREEN}
         progressPct={kpis.asoTaxaPct}
@@ -1191,7 +1191,7 @@ function SaudeDashboard({
                 <KpiCard
                   label="ASO Realizado"
                   value={formatInt(kpis.asoRealizado)}
-                  sublabel={`${formatPct(kpis.asoTaxaPct, 0)} de cumprimento`}
+                  sublabel={`${formatPct(kpis.asoTaxaPct, 1)} realizado de 100%`}
                   icon={UserCheck}
                   accent={YELLOW}
                   progressPct={kpis.asoTaxaPct}
