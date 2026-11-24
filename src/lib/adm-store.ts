@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import base2026 from "./adm-data-2026.json";
+import { baseRequisitos, parseData, type RequisitoRow } from "./adm-requisitos";
 
 export const MESES_ADM = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 export const SEGMENTOS_ADM = ["AMBIENTAL", "BUNKER", "CORPORATIVO", "ESTALEIRO", "OFFSHORE"];
@@ -26,6 +27,7 @@ export type AdmData = {
   /** Total anual informado sem distribuição por mês, produto ou segmento. */
   quantidadeViagensTotal: number | null;
   viagensTabelas?: ViagemTabela[];
+  requisitos?: RequisitoRow[];
 };
 
 const empty: AdmData = { uber: [], viagens: [], chamados: [], quantidadeViagensTotal: null };
@@ -44,7 +46,7 @@ export function viagensFromTabelas(tabs: ViagemTabela[]): ViagemRow[] {
   return out;
 }
 const withViagens = (d: AdmData): AdmData => (d.viagensTabelas?.length ? { ...d, viagens: viagensFromTabelas(d.viagensTabelas) } : d);
-export const baseAdm = (ano: string): AdmData => (ano === "2026" || ano === "2025" ? withViagens(base2026 as AdmData) : empty);
+export const baseAdm = (ano: string): AdmData => (ano === "2026" || ano === "2025" ? { ...withViagens(base2026 as AdmData), requisitos: baseRequisitos() } : empty);
 
 const norm = (s: unknown) =>
   String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
@@ -129,11 +131,25 @@ export async function importAdm(file: File): Promise<AdmData> {
   );
   const quantidadeViagensTotal = totalRow ? num(pick(totalRow, "Valor", "Quantidade", "Total")) : null;
 
+  const reqRows = find("Requisitos Legais", "Requisitos");
+  const requisitos: RequisitoRow[] = [];
+  for (const r of reqRows) {
+    const servico = String(pick(r, "Serviço", "Servico") ?? "").trim();
+    const unidade = String(pick(r, "Unidade") ?? "").trim();
+    if (!servico || !unidade) continue;
+    const u = pick(r, "Última Execução", "Ultima Execucao");
+    const ultimaExecucao = typeof u === "number" ? fmtSerial(u) : String(u ?? "").trim();
+    const v = norm(pick(r, "Validade (dias)", "Validade"));
+    requisitos.push({ servico, unidade, fornecedor: String(pick(r, "Fornecedor") ?? "").trim(), ultimaExecucao: parseData(ultimaExecucao) ? ultimaExecucao : "",
+      validadeDias: v.includes("ANUAL") ? 365 : num(v) || 180, responsavel: String(pick(r, "Responsável", "Responsavel") ?? "").trim() });
+  }
+
   const out: AdmData = viagensTabelas.length
     ? { uber: [...uberMap.values()], viagens: viagensFromTabelas(viagensTabelas), chamados, quantidadeViagensTotal, viagensTabelas }
     : { uber: [...uberMap.values()], viagens: [...viaMap.values()], chamados, quantidadeViagensTotal };
-  if (!out.uber.length && !out.viagens.length && !out.chamados.length)
-    throw new Error("Não encontrei as abas Uber, Chamados ou de Viagens na planilha.");
+  if (reqRows.length) out.requisitos = requisitos;
+  if (!out.uber.length && !out.viagens.length && !out.chamados.length && !requisitos.length)
+    throw new Error("Não encontrei as abas Uber, Chamados, Viagens ou Requisitos Legais na planilha.");
   return out;
 }
 
@@ -163,10 +179,22 @@ export function buildAdmWorkbook(d: AdmData) {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
     { Indicador: "Quantidade de Viagens", Valor: d.quantidadeViagensTotal ?? "" },
   ]), "Indicadores");
+  const req = d.requisitos ?? baseRequisitos();
+  const wsReq = XLSX.utils.json_to_sheet(req.map((r) => ({
+    "Serviço": r.servico, Unidade: r.unidade, Fornecedor: r.fornecedor, "Última Execução": r.ultimaExecucao,
+    "Validade (dias)": r.validadeDias >= 365 ? "Anual" : r.validadeDias, "Responsável": r.responsavel,
+  })), { header: ["Serviço", "Unidade", "Fornecedor", "Última Execução", "Validade (dias)", "Responsável"] });
+  wsReq["!cols"] = [{ wch: 38 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 15 }, { wch: 22 }];
+  XLSX.utils.book_append_sheet(wb, wsReq, "Requisitos Legais");
   return wb;
 }
 export function exportAdm(d: AdmData, fileName: string) {
   XLSX.writeFile(buildAdmWorkbook(d), fileName);
+}
+
+function fmtSerial(n: number) {
+  const d = XLSX.SSF.parse_date_code(n);
+  return d ? `${String(d.d).padStart(2, "0")}/${String(d.m).padStart(2, "0")}/${d.y}` : "";
 }
 
 const key = (ano: string) => `dashboard-adm-${ano}`;
@@ -185,6 +213,7 @@ export function useAdmData(ano: string) {
           saved.viagens = base.viagens;
           saved.viagensTabelas = base.viagensTabelas;
         }
+        if (!saved.requisitos && base.requisitos) saved.requisitos = base.requisitos;
         next = {
           ...saved,
           quantidadeViagensTotal: Object.prototype.hasOwnProperty.call(saved, "quantidadeViagensTotal")

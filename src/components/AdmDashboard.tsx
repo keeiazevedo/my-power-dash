@@ -3,7 +3,7 @@ import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, ComposedChart,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
 } from "recharts";
-import { Calendar, Filter, X, LayoutDashboard, Car, Plane, Headset, Layers, Download, Upload, Printer } from "lucide-react";
+import { Calendar, Filter, X, LayoutDashboard, Car, Plane, Headset, Layers, Scale, Download, Upload, Printer } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPeriodoOptions, getPeriodoIndices, type PeriodoId } from "@/lib/dashboard-analytics";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
@@ -12,6 +12,7 @@ import { segColor } from "@/lib/segment-colors";
 import { useAdmData, importAdm, exportAdm, MESES_ADM, SEGMENTOS_ADM, ANOS_ADM } from "@/lib/adm-store";
 
 import { ViagensSection } from "@/components/dashboard/adm-viagens";
+import { RequisitosSection } from "@/components/dashboard/adm-requisitos";
 import { DashboardDisplayControls } from "@/components/dashboard/dashboard-experience";
 import { KpiSeriesContext, KpiSparkline } from "@/components/dashboard/kpi-sparkline";
 import { DashboardAssistant } from "@/components/dashboard/dashboard-assistant";
@@ -252,6 +253,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
               <TabsTrigger value="viagens" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Plane className="h-4 w-4" />Viagens</TabsTrigger>
               <TabsTrigger value="chamados" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Headset className="h-4 w-4" />Chamados</TabsTrigger>
               <TabsTrigger value="visao-completa" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Layers className="h-4 w-4" />Visão Completa</TabsTrigger>
+              <TabsTrigger value="requisitos" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Scale className="h-4 w-4" />Requisitos Legais</TabsTrigger>
             </TabsList>
           </div>
           <TabsContent value="visao-executiva" className="space-y-6">
@@ -449,6 +451,9 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
 
         <ViagensSection data={data} via={via} meses={mesesAtivos} sub={sub} />
 
+          </TabsContent>
+          <TabsContent value="requisitos" className="space-y-6">
+            <RequisitosSection rows={data.requisitos ?? []} />
           </TabsContent>
         </Tabs>
 
