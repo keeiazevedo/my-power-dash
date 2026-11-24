@@ -119,7 +119,9 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
   const totUber = uber.reduce((a, r) => a + r.valor, 0);
   const totCorr = uber.reduce((a, r) => a + r.corridas, 0);
   const totVia = via.reduce((a, r) => a + r.valor, 0);
-  const totQtd = via.reduce((a, r) => a + (r.quantidade ?? 0), 0);
+  const totQtdDetalhada = via.reduce((a, r) => a + (r.quantidade ?? 0), 0);
+  const totalAnualQtd = data.quantidadeViagensTotal;
+  const totQtd = periodo === "ANO" && seg === "TODOS" && totalAnualQtd !== null ? totalAnualQtd : totQtdDetalhada;
   const totCh = chamadosRows.reduce((a, r) => a + r.total, 0);
   const totSol = chamadosRows.reduce((a, r) => a + r.solucionados, 0);
 

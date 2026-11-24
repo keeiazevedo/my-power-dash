@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import base2026 from "./adm-data-2026.json";
 
@@ -9,9 +9,15 @@ export const ANOS_ADM = ["2026", "2027", "2028"];
 export type UberRow = { mes: string; segmento: string; servico: string; valor: number; corridas: number };
 export type ViagemRow = { mes: string; segmento: string; produto: string; valor: number; quantidade?: number };
 export type ChamadoRow = { mes: string; solucionados: number; total: number };
-export type AdmData = { uber: UberRow[]; viagens: ViagemRow[]; chamados: ChamadoRow[] };
+export type AdmData = {
+  uber: UberRow[];
+  viagens: ViagemRow[];
+  chamados: ChamadoRow[];
+  /** Total anual informado sem distribuição por mês, produto ou segmento. */
+  quantidadeViagensTotal: number | null;
+};
 
-const empty: AdmData = { uber: [], viagens: [], chamados: [] };
+const empty: AdmData = { uber: [], viagens: [], chamados: [], quantidadeViagensTotal: null };
 export const baseAdm = (ano: string): AdmData => (ano === "2026" || ano === "2025" ? (base2026 as AdmData) : empty);
 
 const norm = (s: unknown) =>
@@ -32,7 +38,7 @@ const pick = (r: Record<string, unknown>, ...keys: string[]) => {
   return undefined;
 };
 
-/** Lê a planilha base (mesmo formato do CONSOLIDADO_ADM): abas Uber, Planilha5 (ou Viagens Base) e Chamados. */
+/** Lê a planilha base (mesmo formato do CONSOLIDADO_ADM): abas Uber, Planilha5 (ou Viagens Base), Chamados e Indicadores. */
 export async function importAdm(file: File): Promise<AdmData> {
   const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
   const find = (...names: string[]) => {
@@ -76,13 +82,18 @@ export async function importAdm(file: File): Promise<AdmData> {
     chamados.push({ mes, solucionados: num(pick(r, "N° De Chamados Solucionados", "Solucionados")), total: num(total) });
   }
 
-  const out = { uber: [...uberMap.values()], viagens: [...viaMap.values()], chamados };
+  const totalRow = find("Indicadores", "Resumo").find(
+    (r) => norm(pick(r, "Indicador", "Métrica", "Metrica", "Nome")) === "QUANTIDADE DE VIAGENS",
+  );
+  const quantidadeViagensTotal = totalRow ? num(pick(totalRow, "Valor", "Quantidade", "Total")) : null;
+
+  const out: AdmData = { uber: [...uberMap.values()], viagens: [...viaMap.values()], chamados, quantidadeViagensTotal };
   if (!out.uber.length && !out.viagens.length && !out.chamados.length)
     throw new Error("Não encontrei as abas Uber, Planilha5 ou Chamados na planilha.");
   return out;
 }
 
-/** Template no mesmo formato da planilha base (abas Uber, Planilha5, Chamados). */
+/** Template no mesmo formato da planilha base (abas Uber, Planilha5, Chamados e Indicadores). */
 export function exportAdm(d: AdmData, fileName: string) {
   const wb = XLSX.utils.book_new();
   const nome = (m: string) => ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"][MESES_ADM.indexOf(m)];
@@ -98,6 +109,9 @@ export function exportAdm(d: AdmData, fileName: string) {
     const c = d.chamados.find((x) => x.mes === m);
     return { "Período": nome(m), "N° De Chamados Solucionados": c?.solucionados ?? "", "N° Total de Chamados": c?.total ?? "" };
   })), "Chamados");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
+    { Indicador: "Quantidade de Viagens", Valor: d.quantidadeViagensTotal ?? "" },
+  ]), "Indicadores");
   XLSX.writeFile(wb, fileName);
 }
 
@@ -106,10 +120,19 @@ const key = (ano: string) => `dashboard-adm-${ano}`;
 export function useAdmData(ano: string) {
   const [data, setData] = useState<AdmData>(() => baseAdm(ano));
   useEffect(() => {
-    let next = baseAdm(ano);
+    const base = baseAdm(ano);
+    let next = base;
     try {
       const raw = localStorage.getItem(key(ano));
-      if (raw) next = JSON.parse(raw);
+      if (raw) {
+        const saved = JSON.parse(raw) as AdmData;
+        next = {
+          ...saved,
+          quantidadeViagensTotal: Object.prototype.hasOwnProperty.call(saved, "quantidadeViagensTotal")
+            ? saved.quantidadeViagensTotal
+            : base.quantidadeViagensTotal,
+        };
+      }
     } catch { /* ignore */ }
     setData(next);
   }, [ano]);
