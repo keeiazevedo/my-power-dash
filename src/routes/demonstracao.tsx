@@ -28,6 +28,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DemoQuiz } from "@/components/dashboard/demo-quiz";
 import { DemoKpi } from "@/components/dashboard/demo-kpi";
 import { useDashboardData } from "@/lib/dashboard-store";
 import { MESES_ADM, useAdmData } from "@/lib/adm-store";
@@ -226,6 +227,7 @@ function DemoPage() {
         </div>
       </header>
       <main className="mx-auto max-w-[1440px] space-y-7 px-5 py-7 sm:px-8">
+        <DemoQuiz />
         {!presenting && (
           <div className="flex flex-wrap gap-2" role="group" aria-label="Setor">
             <Button
