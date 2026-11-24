@@ -1,5 +1,4 @@
-# Busca e parecer no dashboard oficial
-- [x] Aplicar busca e parecer aos dois setores, preservando filtros e dados.
-- [x] Padronizar os botões de baixar/importar planilha base da Saúde.
-- [x] Acrescentar PDF / Imprimir ao Administrativo.
-- [x] Verificar navegação pela busca, filtros, parecer, planilhas e impressão.
+# Status dos afastamentos da Saúde
+- [x] Manter somente Em análise, Aposentado e Ativo no gráfico e planilha de status.
+- [x] Preservar os dados, a aba e o gráfico específico de limbo.
+- [x] Verificar gráfico, planilha e importação, inclusive com dados antigos.

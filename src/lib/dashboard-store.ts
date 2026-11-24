@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import * as XLSX from "xlsx";
 import saude2026 from "./saude-data-2026.json";
+import { HEALTH_STATUSES, healthStatusRows, normalizeHealthStatuses } from "./health-status";
 import {
   MESES,
   alteracoesAso,
@@ -19,7 +20,6 @@ import {
   qualidadeVida,
   qualidadeVidaResumo,
   SEGMENTOS,
-  STATUS_AFAST,
 } from "./dashboard-data";
 
 export type DashboardData = {
@@ -57,7 +57,7 @@ export const somaQtd = (rows?: { quantidade: number }[]) =>
 export const defaultData: DashboardData = {
   meses: MESES,
   segmentos: SEGMENTOS,
-  statusAfast: STATUS_AFAST,
+  statusAfast: [...HEALTH_STATUSES],
   alteracoesAso,
   recomendacaoNaoContratacao,
   asoPeriodicoPrevReal,
@@ -69,7 +69,7 @@ export const defaultData: DashboardData = {
   atestadoMedico,
   taxaAbsenteismo,
   afastamentoInss,
-  afastamentoStatus,
+  afastamentoStatus: healthStatusRows(afastamentoStatus),
   limboPrevidenciario,
   qualidadeVida,
   qualidadeVidaResumo,
@@ -108,7 +108,7 @@ function toNum(v: unknown): number {
 }
 
 // ---------- Export ----------
-export function exportToExcel(data: DashboardData, fileName = "dashboard-saude.xlsx") {
+export function buildDashboardWorkbook(data: DashboardData) {
   const wb = XLSX.utils.book_new();
 
   const add = (name: string, rows: unknown[]) => {
@@ -127,7 +127,7 @@ export function exportToExcel(data: DashboardData, fileName = "dashboard-saude.x
   add(SHEETS.ATESTADO, data.atestadoMedico);
   add(SHEETS.ABSENTEISMO, data.taxaAbsenteismo);
   add(SHEETS.AFAST_INSS, data.afastamentoInss);
-  add(SHEETS.AFAST_STATUS, data.afastamentoStatus);
+  add(SHEETS.AFAST_STATUS, healthStatusRows(data.afastamentoStatus));
   add(SHEETS.LIMBO, data.limboPrevidenciario);
   add(SHEETS.QV, data.qualidadeVida);
   add(SHEETS.QV_RESUMO, [data.qualidadeVidaResumo]);
@@ -136,7 +136,11 @@ export function exportToExcel(data: DashboardData, fileName = "dashboard-saude.x
   add(SHEETS.TESTES_AD, qtdRows(data.testesAlcoolDrogas));
   add(SHEETS.SOCIAL, qtdRows(data.atendimentosSociais));
 
-  XLSX.writeFile(wb, fileName);
+  return wb;
+}
+
+export function exportToExcel(data: DashboardData, fileName = "dashboard-saude.xlsx") {
+  XLSX.writeFile(buildDashboardWorkbook(data), fileName);
 }
 
 // ---------- Import ----------
@@ -204,7 +208,7 @@ export async function importFromExcel(file: File): Promise<DashboardData> {
   const atestado = readSegMes(SHEETS.ATESTADO);
   const absent = readSegMes(SHEETS.ABSENTEISMO);
   const afInss = readSegMes(SHEETS.AFAST_INSS);
-  const afStatus = readSegMes(SHEETS.AFAST_STATUS);
+  const afStatus = healthStatusRows(readSegMes(SHEETS.AFAST_STATUS));
   const limbo = readSegMes(SHEETS.LIMBO);
 
   const qv = readSheet(SHEETS.QV).map((r) => ({
@@ -235,10 +239,7 @@ export async function importFromExcel(file: File): Promise<DashboardData> {
     ? catSeg.map((r) => r.segmento).filter(Boolean)
     : defaultData.segmentos;
 
-  // Derive status from afast status sheet
-  const statusAfast = afStatus[0]
-    ? Object.keys(afStatus[0]).filter((k) => k !== "mes")
-    : defaultData.statusAfast;
+  const statusAfast = [...HEALTH_STATUSES];
 
   return {
     meses: meses.length ? meses : defaultData.meses,
@@ -277,7 +278,7 @@ export function makeEmptyData(ano: string): DashboardData {
   return {
     meses: MESES,
     segmentos: SEGMENTOS,
-    statusAfast: STATUS_AFAST,
+    statusAfast: [...HEALTH_STATUSES],
     alteracoesAso: alteracoesAso.map((r) => ({ especialidade: r.especialidade, ADMISSIONAL: 0, PERIODICO: 0 })),
     recomendacaoNaoContratacao: MESES.map((mes) => ({ mes, quantidade: 0 })),
     asoPeriodicoPrevReal: MESES.map((mes) => ({ mes, PREVISTOS: 0, REALIZADOS: 0 })),
@@ -293,7 +294,7 @@ export function makeEmptyData(ano: string): DashboardData {
     atestadoMedico: zeroSegMes(SEGMENTOS),
     taxaAbsenteismo: zeroSegMes(SEGMENTOS),
     afastamentoInss: zeroSegMes(SEGMENTOS),
-    afastamentoStatus: zeroSegMes(STATUS_AFAST),
+    afastamentoStatus: zeroSegMes(HEALTH_STATUSES),
     limboPrevidenciario: zeroSegMes(SEGMENTOS),
     qualidadeVida: MESES.map((mes) => ({ mes, PREVISTA: 0, REALIZADA: 0 })),
     qualidadeVidaResumo: { previstaAno: 0, realizadaAno: 0, taxa: 0 },
@@ -308,7 +309,7 @@ export const SETORES = [
 ] as const;
 
 export function baseDataFor(setor: string, ano: string): DashboardData {
-  if (setor === "SAUDE" && ano === "2026") return { ...(saude2026 as DashboardData), ...INDICADORES_2026 };
+  if (setor === "SAUDE" && ano === "2026") return normalizeHealthStatuses({ ...(saude2026 as DashboardData), ...INDICADORES_2026 });
   return setor === "SAUDE" && ano === "2025" ? defaultData : makeEmptyData(ano);
 }
 
@@ -335,13 +336,14 @@ export function useDashboardData(setor: string, ano: string) {
     } catch {
       /* ignore */
     }
-    setData(next);
+    setData(normalizeHealthStatuses(next));
   }, [setor, ano]);
 
   const save = useCallback((next: DashboardData) => {
-    setData(next);
+    const normalized = normalizeHealthStatuses(next);
+    setData(normalized);
     try {
-      localStorage.setItem(keyFor(setor, ano), JSON.stringify(next));
+      localStorage.setItem(keyFor(setor, ano), JSON.stringify(normalized));
     } catch {
       /* ignore */
     }

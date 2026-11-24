@@ -82,6 +82,7 @@ import { healthMonthInsights } from "@/lib/health-month-insights";
 import { DashboardAssistant } from "@/components/dashboard/dashboard-assistant";
 import { HEALTH_INDICATORS } from "@/lib/indicator-search";
 import { Button } from "@/components/ui/button";
+import { HEALTH_STATUSES } from "@/lib/health-status";
 
 const ANOS = ["2025", "2026", "2027"];
 
@@ -118,9 +119,7 @@ const GRAY = "#B6B6B6";
 
 
 const STATUS_COLORS: Record<string, string> = {
-  LIMBO: YELLOW,
   ATIVO: GREEN,
-  ENCERRADO: GREEN_MARK,
   "EM ANÁLISE": YELLOW_80,
   APOSENTADO: GRAY,
 };
@@ -726,7 +725,7 @@ function SaudeDashboard({
           <YAxis tick={{ fontSize: 11 }} />
           <Tooltip content={<BrandTooltip showTotal />} />
           <Legend wrapperStyle={{ fontSize: 11 }} />
-          {data.statusAfast.map((s, idx) => (
+          {HEALTH_STATUSES.map((s, idx) => (
             <Area
               key={s}
               type="monotone"
