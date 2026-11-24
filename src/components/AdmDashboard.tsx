@@ -11,10 +11,13 @@ import { admMonths, computeAdmExecutive, computeAdmYear, type AdmComparison } fr
 import { segColor } from "@/lib/segment-colors";
 import { useAdmData, importAdm, exportAdm, MESES_ADM, SEGMENTOS_ADM, ANOS_ADM } from "@/lib/adm-store";
 
+import { DashboardDisplayControls } from "@/components/dashboard/dashboard-experience";
+import { KpiSeriesContext, KpiSparkline } from "@/components/dashboard/kpi-sparkline";
+
 const GREEN = "#007A4D", GREEN_80 = "#3BA27E", GREEN_60 = "#5CAF8F", GREEN_45 = "#87C3A9", GREEN_MARK = "#4E7F71";
 const YELLOW = "#EAA921", YELLOW_80 = "#F2B844", YELLOW_65 = "#F8C66B", YELLOW_45 = "#FFD796", GRAY = "#B6B6B6";
 const PALETTE = [GREEN, YELLOW, GREEN_80, YELLOW_80, GREEN_60, YELLOW_65, GREEN_45, YELLOW_45, GREEN_MARK, GRAY];
-const tip = { backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 12 };
+const tip = { backgroundColor: "var(--popover)", color: "var(--popover-foreground)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 };
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const kfmt = (v: number) => (Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)));
 const xMes = { dataKey: "mes", tick: { fontSize: 11 }, interval: 0 as const };
@@ -40,9 +43,10 @@ function Delta({ c, fmt, prev, goodDown = true, pp }: { c?: AdmComparison; fmt: 
 }
 function KPI({ label, value, accent = GREEN, children }: { label: string; value: string | number; accent?: string; children?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm min-w-0">
+    <div className="kpi-card rounded-xl border bg-card p-4 shadow-sm min-w-0">
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-1 text-2xl font-bold tracking-tight" style={{ color: accent }}>{value}</div>
+      <div className="kpi-value mt-1 break-words text-2xl font-bold" style={{ color: accent === YELLOW ? "var(--secondary)" : "var(--primary)" }}>{value}</div>
+      <KpiSparkline label={label} accent={accent === YELLOW} />
       {children}
     </div>
   );
@@ -54,7 +58,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
   const [periodo, setPeriodo] = useState<PeriodoId>("ANO");
   const [tab, setTab] = useState("visao-executiva");
   const periodoOptions = useMemo(() => getPeriodoOptions(MESES_ADM), []);
-  const periodoAtual = periodoOptions.find((p) => p.id === periodo) ?? periodoOptions[0]!;
+  const periodoAtual = periodoOptions.find((p) => p.id === periodo) ?? { id: "ANO" as const, shortLabel: "Ano Completo" };
   const mesesPeriodo = useMemo(() => new Set(getPeriodoIndices(MESES_ADM, periodo).map((i) => MESES_ADM[i])), [periodo]);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -125,6 +129,24 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
   const totCh = chamadosRows.reduce((a, r) => a + r.total, 0);
   const totSol = chamadosRows.reduce((a, r) => a + r.solucionados, 0);
 
+  const monthlySeries = useMemo(() => {
+    const sum = (rows: { mes: string; segmento: string; valor: number }[], mes: string) => rows.filter(r => r.mes === mes).reduce((a, r) => a + r.valor, 0);
+    const uberPoints = mesesAtivos.map(mes => ({ mes, valor: sum(uber, mes) }));
+    const travelPoints = mesesAtivos.map(mes => ({ mes, valor: sum(via, mes) }));
+    const hasTravelQuantity = via.some(r => typeof r.quantidade === "number");
+    const quantities = hasTravelQuantity ? mesesAtivos.map(mes => ({ mes, valor: via.filter(r => r.mes === mes).reduce((a, r) => a + (r.quantidade ?? 0), 0) })) : [];
+    return {
+      "Chamados Administrativos": chamados.map(r => ({ mes: r.mes, valor: r.Total })),
+      "Taxa de Resolução": chamados.filter(r => r.Total > 0).map(r => ({ mes: r.mes, valor: r["% Resolução"] })),
+      "Custo Uber": uberPoints,
+      "Corridas Uber": mesesAtivos.map(mes => ({ mes, valor: uber.filter(r => r.mes === mes).reduce((a, r) => a + r.corridas, 0) })),
+      "Ticket Médio Uber": ticket.map(r => ({ mes: r.mes, valor: r.ticket })),
+      "Custo Viagens": travelPoints,
+      "Quantidade de Viagens": quantities,
+      "Ticket Médio Viagens": travelPoints.flatMap(r => { const qty = quantities.find(q => q.mes === r.mes)?.valor; return qty ? [{ mes: r.mes, valor: r.valor / qty }] : []; }),
+    };
+  }, [uber, via, mesesAtivos, chamados, ticket]);
+
   const handleImport = async (f: File) => {
     setBusy(true); setMsg(null);
     try { save(await importAdm(f)); setMsg("Planilha base importada com sucesso."); }
@@ -157,45 +179,48 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-white">
+    <KpiSeriesContext.Provider value={monthlySeries}><div className="min-h-screen bg-background">
+      <header className="border-b bg-card">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-3 px-4 py-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-md" style={{ background: `linear-gradient(135deg, ${GREEN} 50%, ${YELLOW} 50%)` }} />
             <div>
               <h1 className="text-xl font-bold text-foreground sm:text-2xl">Dashboard Administrativo • {ano}</h1>
               <p className="text-xs text-muted-foreground">Uber, viagens e chamados por mês e segmento</p>
-              <div className="mt-2 flex flex-wrap gap-1">
+              <div className="presentation-tools mt-2 flex flex-wrap gap-1">
                 {header}
                 <span className="mx-1 w-px bg-border" />
                 {ANOS_ADM.map((a) => (
                   <button key={a} onClick={() => setAno(a)}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${ano === a ? "bg-accent text-accent-foreground" : "border bg-white text-muted-foreground hover:bg-muted"}`}>{a}</button>
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${ano === a ? "bg-accent text-accent-foreground" : "border bg-card text-muted-foreground hover:bg-muted"}`}>{a}</button>
                 ))}
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2 sm:items-end">
+            <DashboardDisplayControls />
+          <div className="presentation-tools no-print flex flex-wrap items-center gap-2">
             <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f); }} />
             <button onClick={() => exportAdm(data, `base-administrativo-${ano}.xlsx`)}
-              className="rounded-md border border-primary bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary shadow-sm hover:bg-primary/5">Baixar planilha base</button>
+              className="rounded-md border border-primary bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary shadow-sm hover:bg-primary/5">Baixar planilha base</button>
             <button onClick={() => fileRef.current?.click()} disabled={busy}
               className="rounded-md bg-primary px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50">{busy ? "Importando..." : "Importar planilha base"}</button>
             <button onClick={() => { if (confirm("Restaurar dados iniciais?")) { reset(); setMsg("Dados restaurados."); } }}
-              className="rounded-md border bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm hover:bg-muted">Restaurar</button>
+              className="rounded-md border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm hover:bg-muted">Restaurar</button>
+          </div>
           </div>
         </div>
         {msg && <div className="mx-auto max-w-[1400px] px-4 pb-3 text-xs text-muted-foreground">{msg}</div>}
       </header>
 
-      <div className="sticky top-0 z-20 border-b bg-white/95 backdrop-blur">
+      <div className="presentation-tools no-print sticky top-0 z-20 border-b bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5 text-primary" />
               <label htmlFor="adm-periodo" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Período</label>
               <select id="adm-periodo" value={periodo} onChange={(e) => setPeriodo(e.target.value as PeriodoId)}
-                className="rounded-md border bg-white px-2.5 py-1.5 text-xs font-medium text-foreground shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary">
+                className="rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary">
                 <optgroup label="Visão Anual e Semestral">{periodoOptions.filter((o) => o.group === "visao" || o.group === "semestre").map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</optgroup>
                 <optgroup label="Trimestres">{periodoOptions.filter((o) => o.group === "trimestre").map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</optgroup>
                 <optgroup label="Mês Específico">{periodoOptions.filter((o) => o.group === "mes").map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</optgroup>
@@ -205,7 +230,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
               <Filter className="h-3.5 w-3.5 text-primary" />
               <label htmlFor="adm-segmento" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Segmento</label>
               <select id="adm-segmento" value={seg} onChange={(e) => setSeg(e.target.value)}
-                className="rounded-md border bg-white px-2.5 py-1.5 text-xs font-medium text-foreground shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary">
+                className="rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary">
                 <option value="TODOS">Todos os segmentos</option>
                 {SEGMENTOS_ADM.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -223,7 +248,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
 
       <main className="mx-auto max-w-[1400px] space-y-6 px-4 py-6">
         <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-          <div className="overflow-x-auto pb-1">
+          <div className="presentation-tools no-print overflow-x-auto pb-1">
             <TabsList className="inline-flex h-auto min-w-max flex-wrap justify-start gap-1 rounded-xl bg-muted/80 p-1.5">
               <TabsTrigger value="visao-executiva" className="gap-1.5 py-1.5 text-xs sm:text-sm"><LayoutDashboard className="h-4 w-4" />Visão Executiva</TabsTrigger>
               <TabsTrigger value="uber" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Car className="h-4 w-4" />Uber</TabsTrigger>
@@ -237,7 +262,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
           <>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Destaques</span>
-              <select value={modoAno ? "ANO" : mesRef} onChange={(e) => setMesSel(e.target.value)} className="rounded-md border bg-white px-3 py-1.5 text-sm font-medium shadow-sm">
+              <select value={modoAno ? "ANO" : mesRef} onChange={(e) => setMesSel(e.target.value)} className="rounded-md border bg-card px-3 py-1.5 text-sm font-medium shadow-sm">
                 <option value="ANO">Ano completo</option>
                 {meses.map((m) => <option key={m} value={m}>Comparar {m} x mês anterior</option>)}
               </select>
@@ -470,6 +495,6 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
 
         <footer className="pt-4 text-center text-xs text-muted-foreground">Setor Administrativo • Ano {ano} • Cores da marca Bravante</footer>
       </main>
-    </div>
+    </div></KpiSeriesContext.Provider>
   );
 }

@@ -62,8 +62,8 @@ export function InsightsPanel({
                 key={item.id}
                 className={cn(
                   "rounded-lg border p-3 transition-colors",
-                  item.tone === "positive" && "border-emerald-200/80 bg-emerald-50/50",
-                  item.tone === "warning" && "border-amber-200/80 bg-amber-50/50",
+                  item.tone === "positive" && "border-primary/25 bg-primary/5",
+                  item.tone === "warning" && "border-secondary/30 bg-secondary/5",
                   item.tone === "neutral" && "border-border bg-muted/30",
                 )}
               >
@@ -71,8 +71,8 @@ export function InsightsPanel({
                   <Icon
                     className={cn(
                       "mt-0.5 h-4 w-4 shrink-0",
-                      item.tone === "positive" && "text-emerald-700",
-                      item.tone === "warning" && "text-amber-600",
+                      item.tone === "positive" && "text-primary",
+                      item.tone === "warning" && "text-secondary",
                       item.tone === "neutral" && "text-primary",
                     )}
                   />

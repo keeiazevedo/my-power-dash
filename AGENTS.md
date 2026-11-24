@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep visual experiments on `/demonstracao` with route-local state and scoped styles; the production dashboard and stored datasets must remain unaffected.
+- Share presentation/theme state through DashboardExperience and filtered KPI series through KpiSeriesContext; visual enhancements must not write or transform stored datasets.

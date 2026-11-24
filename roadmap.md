@@ -1,4 +1,4 @@
-# Prévia visual isolada
-- [x] Criar demonstração de Saúde e Administrativo com dados existentes e mini-gráficos.
-- [x] Adicionar tema escuro local e apresentação em tela cheia.
-- [x] Verificar os dois painéis, controles e tamanhos de tela sem modificar o dashboard principal.
+# Atualização visual dos painéis principais
+- [x] Acrescentar mini-gráficos aos cards com histórico mensal, preservando filtros e valores.
+- [x] Acrescentar tema claro/escuro e modo apresentação aos dois setores.
+- [x] Verificar gráficos, filtros, planilhas e retorno da apresentação em desktop e celular.

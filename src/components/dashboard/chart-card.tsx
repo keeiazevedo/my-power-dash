@@ -79,7 +79,7 @@ export function BrandTooltip({
   };
 
   return (
-    <div className="min-w-[170px] rounded-lg border bg-white p-2.5 text-xs shadow-lg">
+    <div className="min-w-[170px] rounded-lg border bg-popover p-2.5 text-xs text-popover-foreground shadow-lg">
       {label && <div className="mb-1.5 border-b pb-1 font-semibold text-foreground">{label}</div>}
       <div className="space-y-1">
         {[...payload].sort((a, b) => (typeof b.value === "number" ? b.value : -Infinity) - (typeof a.value === "number" ? a.value : -Infinity)).map((entry, idx) => (

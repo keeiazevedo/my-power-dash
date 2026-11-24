@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
 import type { TrendInfo } from "@/lib/dashboard-analytics";
 import { cn } from "@/lib/utils";
+import { KpiSparkline } from "./kpi-sparkline";
 
 export type KpiCardProps = {
   label: string;
@@ -24,6 +25,8 @@ export function KpiCard({
   progressPct,
   scopeBadge,
 }: KpiCardProps) {
+  const yellow = accent === "#EAA921";
+  const color = yellow ? "var(--secondary)" : "var(--primary)";
   const TrendIcon =
     trend?.direction === "up"
       ? ArrowUpRight
@@ -32,7 +35,7 @@ export function KpiCard({
         : ArrowRight;
 
   return (
-    <div className="kpi-card group relative flex flex-col justify-between rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md break-inside-avoid">
+    <div className="kpi-card group relative min-w-0 flex flex-col justify-between rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md break-inside-avoid">
       <div>
         <div className="flex items-start justify-between gap-2">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -40,14 +43,14 @@ export function KpiCard({
           </span>
           <div
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-            style={{ backgroundColor: `${accent}18`, color: accent }}
+            style={{ backgroundColor: `color-mix(in oklch, ${color} 10%, transparent)`, color }}
           >
             <Icon className="h-4 w-4" />
           </div>
         </div>
 
         <div className="mt-2 flex items-baseline gap-2">
-          <div className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: accent }}>
+          <div className="kpi-value break-words text-2xl font-bold sm:text-3xl" style={{ color }}>
             {value}
           </div>
           {scopeBadge && (
@@ -66,13 +69,15 @@ export function KpiCard({
                 className="h-full rounded-full transition-all duration-300"
                 style={{
                   width: `${Math.min(100, Math.max(0, progressPct))}%`,
-                  backgroundColor: accent,
+                  backgroundColor: color,
                 }}
               />
             </div>
           </div>
         )}
       </div>
+
+      <KpiSparkline label={label} accent={yellow} />
 
       {trend && (
         <div className="mt-3 flex items-center pt-2 border-t border-border/60">

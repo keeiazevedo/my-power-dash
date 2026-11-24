@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
@@ -76,6 +76,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+import { DashboardExperience, DashboardDisplayControls } from "@/components/dashboard/dashboard-experience";
+import { KpiSeriesContext, type KpiPoint } from "@/components/dashboard/kpi-sparkline";
+
 const ANOS = ["2025", "2026", "2027"];
 
 export const Route = createFileRoute("/")({
@@ -129,6 +132,10 @@ type TabValue =
   | "visao-completa";
 
 function DashboardPage() {
+  return <DashboardExperience><DashboardContent /></DashboardExperience>;
+}
+
+function DashboardContent() {
   const [setor, setSetor] = useState<string>("ADMINISTRATIVO");
   const [ano, setAno] = useState<string>("2026");
 
@@ -151,7 +158,7 @@ function DashboardPage() {
                 className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors cursor-pointer ${
                   setor === s.id
                     ? "bg-primary text-primary-foreground shadow-xs"
-                    : "border bg-white text-muted-foreground hover:bg-muted"
+                    : "border bg-card text-muted-foreground hover:bg-muted"
                 }}`}
               >
                 {s.label}
@@ -216,6 +223,40 @@ function SaudeDashboard({
     () => computeExecutiveKpis(data, filtered, periodoAtual.id, segAtivo, segList),
     [data, filtered, periodoAtual.id, segAtivo, segList],
   );
+
+  const monthlySeries = useMemo(() => {
+    const lastIndex = data.meses.indexOf(kpis.refMesAtual);
+    const months = filtered.indices.filter(i => i <= lastIndex).map(i => data.meses[i]).filter((m): m is string => Boolean(m));
+    const points = (get: (m: string) => number): KpiPoint[] => months.map(mes => ({ mes, valor: get(mes) }));
+    const segmentSum = (row: Record<string, string | number> | undefined) => segList.reduce((sum, key) => sum + Number(row?.[key] ?? 0), 0);
+    const aso = points(m => data.asoPeriodicoPrevReal.find(r => r.mes === m)?.REALIZADOS ?? 0);
+    const abs = points(m => segList.length ? segmentSum(data.taxaAbsenteismo.find(r => r.mes === m)) / segList.length : 0);
+    const cat = points(m => data.catPorMes.find(r => r.mes === m)?.quantidade ?? 0);
+    const atest = points(m => segmentSum(data.atestadoMedico.find(r => r.mes === m)));
+    const limbo = points(m => segmentSum(data.limboPrevidenciario.find(r => r.mes === m))).filter(r => data.meses.indexOf(r.mes) <= data.meses.indexOf(kpis.limboMesFinal));
+    const enf = points(m => data.atendimentosEnfermagem.find(r => r.mes === m)?.TOTAL ?? 0);
+    const merp = points(m => data.atendimentosMerp.find(r => r.mes === m)?.quantidade ?? 0);
+    const qv = points(m => data.qualidadeVida.find(r => r.mes === m)?.REALIZADA ?? 0);
+    const qvPrev = points(m => data.qualidadeVida.find(r => r.mes === m)?.PREVISTA ?? 0);
+    const qvRate = points(m => { const r = data.qualidadeVida.find(r => r.mes === m); return r?.PREVISTA ? r.REALIZADA / r.PREVISTA * 100 : 0; });
+    const monthlyQuantity = (rows?: { mes: string; quantidade: number }[]) => (rows ?? []).filter(r => months.includes(r.mes)).map(r => ({ mes: r.mes, valor: r.quantidade }));
+    return {
+      "ASO Periódico": aso, "ASO Realizado": aso,
+      "ASO Previsto": points(m => data.asoPeriodicoPrevReal.find(r => r.mes === m)?.PREVISTOS ?? 0),
+      "Taxa Absenteísmo": abs, "Taxa Média Absenteísmo": abs,
+      "Comunicações CAT": cat, "Total de CAT": cat, "Média Mensal CAT": cat,
+      "Atestados Médicos": atest, "Total Atestados": atest,
+      "Casos em Limbo": limbo, "Limbo Previdenciário": limbo,
+      "Atend. Clínicos": points(m => (data.atendimentosEnfermagem.find(r => r.mes === m)?.TOTAL ?? 0) + (data.atendimentosMerp.find(r => r.mes === m)?.quantidade ?? 0)),
+      "Atend. Enfermagem": enf, "Atend. MERP": merp,
+      "Não Contratação": points(m => data.recomendacaoNaoContratacao.find(r => r.mes === m)?.quantidade ?? 0),
+      "Novos Afast. INSS": points(m => segmentSum(data.afastamentoInss.find(r => r.mes === m))),
+      "Ações PQV Previstas": qvPrev, "Ações PQV Realizadas": qv,
+      "% Atendimento QV": qvRate, "% Atendimento": qvRate,
+      "Testes Álcool e Drogas": monthlyQuantity(data.testesAlcoolDrogas),
+      "Atendimentos Sociais": monthlyQuantity(data.atendimentosSociais),
+    };
+  }, [data, filtered, kpis.refMesAtual, kpis.limboMesFinal, segList]);
 
   const insights = useMemo(
     () => computeInsights(data, filtered, kpis, segAtivo, segList),
@@ -802,9 +843,9 @@ function SaudeDashboard({
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <KpiSeriesContext.Provider value={monthlySeries}><div className="min-h-screen bg-background">
       {/* Top Brand Header */}
-      <header className="border-b bg-white">
+      <header className="border-b bg-card">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-4 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3 sm:items-center">
             <div
@@ -823,7 +864,7 @@ function SaudeDashboard({
               <p className="text-xs text-muted-foreground">
                 Evolução mensal de saúde ocupacional, segurança e qualidade de vida
               </p>
-              <div className="no-print mt-2.5 flex flex-wrap items-center gap-1.5">
+              <div className="presentation-tools no-print mt-2.5 flex flex-wrap items-center gap-1.5">
                 {SETORES.map((s) => (
                   <button
                     key={s.id}
@@ -832,7 +873,7 @@ function SaudeDashboard({
                     className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors cursor-pointer ${
                       setor === s.id
                         ? "bg-primary text-primary-foreground shadow-xs"
-                        : "border bg-white text-muted-foreground hover:bg-muted"
+                        : "border bg-card text-muted-foreground hover:bg-muted"
                     }`}
                   >
                     {s.label}
@@ -847,7 +888,7 @@ function SaudeDashboard({
                     className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors cursor-pointer ${
                       ano === a
                         ? "bg-accent text-accent-foreground ring-1 ring-primary/25"
-                        : "border bg-white text-muted-foreground hover:bg-muted"
+                        : "border bg-card text-muted-foreground hover:bg-muted"
                     }`}
                   >
                     {a}
@@ -858,7 +899,9 @@ function SaudeDashboard({
           </div>
 
           {/* Data Actions */}
-          <div className="no-print flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2 lg:items-end">
+            <DashboardDisplayControls />
+          <div className="presentation-tools no-print flex flex-wrap items-center gap-2">
             <input
               ref={fileRef}
               type="file"
@@ -872,7 +915,7 @@ function SaudeDashboard({
             <button
               type="button"
               onClick={handleExportTemplate}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-primary bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary shadow-xs transition-colors hover:bg-primary/5 cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary shadow-xs transition-colors hover:bg-primary/5 cursor-pointer"
             >
               <Download className="h-3.5 w-3.5" />
               Baixar template
@@ -889,7 +932,7 @@ function SaudeDashboard({
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-foreground shadow-xs transition-colors hover:bg-muted cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-foreground shadow-xs transition-colors hover:bg-muted cursor-pointer"
               title="Imprimir aba atual ou salvar como PDF"
             >
               <Printer className="h-3.5 w-3.5 text-muted-foreground" />
@@ -900,7 +943,7 @@ function SaudeDashboard({
               <AlertDialogTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-xs transition-colors hover:bg-muted cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-xs transition-colors hover:bg-muted cursor-pointer"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Restaurar
@@ -924,12 +967,13 @@ function SaudeDashboard({
               </AlertDialogContent>
             </AlertDialog>
           </div>
+          </div>
         </div>
       </header>
 
       {/* Sticky Filter Sub-bar */}
       {!empty && (
-        <div className="no-print sticky top-0 z-20 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
+        <div className="presentation-tools no-print sticky top-0 z-20 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
           <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-2.5">
             <div className="flex flex-wrap items-center gap-3">
               {/* Period Filter */}
@@ -945,7 +989,7 @@ function SaudeDashboard({
                   id="select-periodo"
                   value={periodoAtual.id}
                   onChange={(e) => setPeriodo(e.target.value as PeriodoId)}
-                  className="rounded-md border bg-white px-2.5 py-1.5 text-xs font-medium text-foreground shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <optgroup label="Visão Anual e Semestral">
                     {periodoOptions
@@ -990,7 +1034,7 @@ function SaudeDashboard({
                   id="select-segmento"
                   value={segAtivo}
                   onChange={(e) => setSeg(e.target.value)}
-                  className="rounded-md border bg-white px-2.5 py-1.5 text-xs font-medium text-foreground shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="TODOS">Todos os segmentos</option>
                   {data.segmentos.map((s) => (
@@ -1061,7 +1105,7 @@ function SaudeDashboard({
             className="space-y-6"
           >
             {/* Navigation Tabs */}
-            <div className="no-print overflow-x-auto pb-1">
+            <div className="presentation-tools no-print overflow-x-auto pb-1">
               <TabsList className="inline-flex h-auto min-w-max flex-wrap justify-start gap-1 rounded-xl bg-muted/80 p-1.5">
                 <TabsTrigger value="visao-executiva" className="gap-1.5 py-1.5 text-xs sm:text-sm">
                   <LayoutDashboard className="h-4 w-4" />
@@ -1385,6 +1429,6 @@ function SaudeDashboard({
           Identidade Visual Bravante
         </footer>
       </main>
-    </div>
+    </div></KpiSeriesContext.Provider>
   );
 }

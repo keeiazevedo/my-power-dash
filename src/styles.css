@@ -162,7 +162,8 @@
   letter-spacing: 0;
 }
 
-.dashboard-demo.demo-dark {
+.dashboard-demo.demo-dark,
+html.dashboard-theme-dark {
   --background: oklch(0.17 0.004 160);
   --foreground: oklch(0.96 0.005 160);
   --card: oklch(0.22 0.006 160);
@@ -190,6 +191,22 @@
 
 .dashboard-demo.demo-presenting .demo-kpi-value {
   font-size: 2.25rem;
+}
+
+.dashboard-live { letter-spacing: 0; }
+.dashboard-live:fullscreen { overflow-y: auto; }
+.dashboard-presenting .presentation-tools { display: none !important; }
+.dashboard-presenting .kpi-value { font-size: 2.25rem; }
+.dashboard-live .recharts-text { fill: var(--muted-foreground); }
+.dashboard-live .recharts-legend-item-text { color: var(--muted-foreground) !important; }
+.dashboard-live .recharts-cartesian-grid line { stroke: var(--border); }
+html.dashboard-theme-dark .dashboard-live .bg-emerald-50 { background: var(--accent); }
+html.dashboard-theme-dark .dashboard-live .text-emerald-700 { color: var(--primary); }
+html.dashboard-theme-dark .dashboard-live :is(.bg-amber-50, .bg-amber-100) { background: var(--muted); }
+html.dashboard-theme-dark .dashboard-live :is(.text-amber-800, .text-amber-900) { color: var(--secondary); }
+
+@media print {
+  .kpi-sparkline { display: none; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
