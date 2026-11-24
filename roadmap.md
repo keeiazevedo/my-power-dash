@@ -1,4 +1,4 @@
-# Atualização visual dos painéis principais
-- [x] Acrescentar mini-gráficos aos cards com histórico mensal, preservando filtros e valores.
-- [x] Acrescentar tema claro/escuro e modo apresentação aos dois setores.
-- [x] Verificar gráficos, filtros, planilhas e retorno da apresentação em desktop e celular.
+# Comparações nos destaques da Saúde
+- [x] Manter ano completo como padrão e acrescentar comparação com mês anterior.
+- [x] Aplicar segmento às comparações sem alterar os demais indicadores e filtros.
+- [x] Testar cálculos e seleção dos destaques no dashboard.

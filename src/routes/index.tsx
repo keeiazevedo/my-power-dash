@@ -78,6 +78,7 @@ import {
 
 import { DashboardExperience, DashboardDisplayControls } from "@/components/dashboard/dashboard-experience";
 import { KpiSeriesContext, type KpiPoint } from "@/components/dashboard/kpi-sparkline";
+import { healthMonthInsights } from "@/lib/health-month-insights";
 
 const ANOS = ["2025", "2026", "2027"];
 
@@ -195,6 +196,7 @@ function SaudeDashboard({
   const [seg, setSeg] = useState<string>("TODOS");
   const [activeTab, setActiveTab] = useState<TabValue>("visao-executiva");
   const [importing, setImporting] = useState(false);
+  const [insightMonth, setInsightMonth] = useState("ANO");
 
   const { data, save, reset } = useDashboardData(setor, ano);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -258,9 +260,26 @@ function SaudeDashboard({
     };
   }, [data, filtered, kpis.refMesAtual, kpis.limboMesFinal, segList]);
 
-  const insights = useMemo(
-    () => computeInsights(data, filtered, kpis, segAtivo, segList),
-    [data, filtered, kpis, segAtivo, segList],
+  const annualHighlightData = useMemo(() => {
+    const yearFiltered = filterDashboardByPeriodo(data, "ANO", segList);
+    const yearKpis = computeExecutiveKpis(data, yearFiltered, "ANO", segAtivo, segList);
+    return { months: data.meses.slice(0, data.meses.indexOf(yearKpis.refMesAtual) + 1), insights: computeInsights(data, yearFiltered, yearKpis, segAtivo, segList) };
+  }, [data, segAtivo, segList]);
+  const selectedHighlightMonth = annualHighlightData.months.includes(insightMonth) ? insightMonth : "ANO";
+  const previousHighlightMonth = data.meses[data.meses.indexOf(selectedHighlightMonth) - 1];
+  const highlightInsights = useMemo(() => selectedHighlightMonth === "ANO" ? annualHighlightData.insights : healthMonthInsights(data, selectedHighlightMonth, segList), [data, selectedHighlightMonth, annualHighlightData, segList]);
+  const highlightPanel = (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor="saude-destaques-mes" className="text-xs font-medium uppercase text-muted-foreground">Destaques</label>
+        <select id="saude-destaques-mes" value={selectedHighlightMonth} onChange={e => setInsightMonth(e.target.value)} className="rounded-md border bg-card px-3 py-1.5 text-sm font-medium shadow-sm">
+          <option value="ANO">Ano completo</option>
+          {annualHighlightData.months.map(m => <option key={m} value={m}>Comparar {m} x mês anterior</option>)}
+        </select>
+        <span className="text-xs text-muted-foreground">{selectedHighlightMonth === "ANO" ? `${annualHighlightData.months[0] ?? ""} a ${annualHighlightData.months.at(-1) ?? ""} (último mês com dados)` : previousHighlightMonth ? `${selectedHighlightMonth} comparado com ${previousHighlightMonth}` : "Sem mês anterior para comparar"} • {segSubtitle}</span>
+      </div>
+      <InsightsPanel insights={highlightInsights} periodoLabel={selectedHighlightMonth === "ANO" ? `Ano ${ano}` : `${selectedHighlightMonth}/${ano}`} />
+    </div>
   );
 
   const catSegFiltrado = useMemo(
@@ -1136,7 +1155,7 @@ function SaudeDashboard({
 
             {/* TAB 1: VISÃO EXECUTIVA */}
             <TabsContent value="visao-executiva" className="space-y-6">
-              <InsightsPanel insights={insights} periodoLabel={periodoAtual.shortLabel} />
+              {highlightPanel}
               {executiveKpiGrid}
 
               <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -1360,7 +1379,7 @@ function SaudeDashboard({
 
             {/* TAB 6: VISÃO COMPLETA */}
             <TabsContent value="visao-completa" className="space-y-6">
-              <InsightsPanel insights={insights} periodoLabel={periodoAtual.shortLabel} />
+              {highlightPanel}
               {executiveKpiGrid}
 
               <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
