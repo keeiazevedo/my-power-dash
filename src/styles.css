@@ -157,6 +157,51 @@
   }
 }
 
+.dashboard-demo {
+  --radius: 0.5rem;
+  letter-spacing: 0;
+}
+
+.dashboard-demo.demo-dark {
+  --background: oklch(0.17 0.004 160);
+  --foreground: oklch(0.96 0.005 160);
+  --card: oklch(0.22 0.006 160);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.72 0.115 160);
+  --primary-foreground: oklch(0.17 0.02 160);
+  --secondary: oklch(0.78 0.15 80);
+  --secondary-foreground: oklch(0.2 0.02 160);
+  --muted: oklch(0.27 0.006 160);
+  --muted-foreground: oklch(0.72 0.008 160);
+  --accent: oklch(0.29 0.025 160);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.33 0.008 160);
+  --input: var(--border);
+  --ring: var(--primary);
+  --chart-1: var(--primary);
+  --chart-2: var(--secondary);
+}
+
+.dashboard-demo:fullscreen {
+  overflow-y: auto;
+}
+
+.dashboard-demo.demo-presenting .demo-kpi-value {
+  font-size: 2.25rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dashboard-demo .demo-kpi {
+    transition: border-color 180ms ease, transform 180ms ease;
+  }
+  .dashboard-demo .demo-kpi:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+  }
+}
+
 @media print {
   .no-print {
     display: none !important;
