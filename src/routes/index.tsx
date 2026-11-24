@@ -58,6 +58,7 @@ import {
   type PeriodoId,
 } from "@/lib/dashboard-analytics";
 import { KpiCard } from "@/components/dashboard/kpi-card";
+import { somaQtd } from "@/lib/dashboard-store";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
 import { BrandTooltip, ChartCard } from "@/components/dashboard/chart-card";
 import { DashboardEmptyState } from "@/components/dashboard/empty-state";
@@ -714,8 +715,8 @@ function SaudeDashboard({
 
   const chartQualidadeVida = (
     <ChartCard
-      title="Qualidade de Vida - Previsto x Realizado"
-      subtitle={`Execução mensal de ações • ${periodoAtual.shortLabel}`}
+      title="Ações PQV - Previsto x Realizado"
+      subtitle={`Campanhas e informes • Execução mensal • ${periodoAtual.shortLabel}`}
       badge={scopeEmpresaBadge ?? `${formatPct(kpis.qvTaxaPct, 0)} concluído`}
     >
       <ResponsiveContainer>
@@ -733,7 +734,7 @@ function SaudeDashboard({
   );
 
   const executiveKpiGrid = (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <KpiCard
         label="ASO Periódico"
         value={formatInt(kpis.asoRealizado)}
@@ -784,6 +785,22 @@ function SaudeDashboard({
         icon={Stethoscope}
         accent={GREEN}
         trend={kpis.enfermagemTrend}
+        scopeBadge={segAtivo !== "TODOS" ? "Empresa" : undefined}
+      />
+      <KpiCard
+        label="Testes Álcool e Drogas"
+        value={formatInt(somaQtd(data.testesAlcoolDrogas))}
+        sublabel="Testes aleatórios realizados no ano"
+        icon={ShieldAlert}
+        accent={GREEN}
+        scopeBadge={segAtivo !== "TODOS" ? "Empresa" : undefined}
+      />
+      <KpiCard
+        label="Atendimentos Sociais"
+        value={formatInt(somaQtd(data.atendimentosSociais))}
+        sublabel="Acumulado do ano"
+        icon={HeartHandshake}
+        accent={YELLOW}
         scopeBadge={segAtivo !== "TODOS" ? "Empresa" : undefined}
       />
     </section>
@@ -1061,7 +1078,7 @@ function SaudeDashboard({
                 </TabsTrigger>
                 <TabsTrigger value="seguranca-cat" className="gap-1.5 py-1.5 text-xs sm:text-sm">
                   <ShieldAlert className="h-4 w-4" />
-                  Segurança (CAT)
+                  Segurança
                 </TabsTrigger>
                 <TabsTrigger value="absenteismo-inss" className="gap-1.5 py-1.5 text-xs sm:text-sm">
                   <Activity className="h-4 w-4" />
@@ -1069,7 +1086,7 @@ function SaudeDashboard({
                 </TabsTrigger>
                 <TabsTrigger value="qualidade-vida" className="gap-1.5 py-1.5 text-xs sm:text-sm">
                   <HeartHandshake className="h-4 w-4" />
-                  Qualidade de Vida
+                  Qualidade de Vida & Social
                 </TabsTrigger>
                 <TabsTrigger value="visao-completa" className="gap-1.5 py-1.5 text-xs sm:text-sm">
                   <Layers className="h-4 w-4" />
@@ -1163,7 +1180,16 @@ function SaudeDashboard({
 
             {/* TAB 3: SEGURANÇA (CAT) */}
             <TabsContent value="seguranca-cat" className="space-y-6">
-              <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard
+                  label="Testes Álcool e Drogas"
+                  value={formatInt(somaQtd(data.testesAlcoolDrogas))}
+                  sublabel="Testes aleatórios realizados no ano"
+                  icon={ShieldAlert}
+                  accent={GREEN}
+                  scopeBadge={segAtivo !== "TODOS" ? "Empresa" : undefined}
+                />
+
                 <KpiCard
                   label="Total CAT no Recorte"
                   value={formatInt(kpis.totalCat)}
@@ -1253,19 +1279,28 @@ function SaudeDashboard({
 
             {/* TAB 5: QUALIDADE DE VIDA */}
             <TabsContent value="qualidade-vida" className="space-y-6">
-              <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <KpiCard
-                  label="Ações Previstas"
+                  label="Atendimentos Sociais"
+                  value={formatInt(somaQtd(data.atendimentosSociais))}
+                  sublabel="Acumulado do ano"
+                  icon={HeartHandshake}
+                  accent={YELLOW}
+                  scopeBadge={segAtivo !== "TODOS" ? "Empresa" : undefined}
+                />
+
+                <KpiCard
+                  label="Ações PQV Previstas"
                   value={formatInt(kpis.qvPrevista)}
-                  sublabel={`Período: ${periodoAtual.shortLabel}`}
+                  sublabel={`Campanhas e informes • ${periodoAtual.shortLabel}`}
                   icon={Calendar}
                   accent={GREEN}
                   scopeBadge={segAtivo !== "TODOS" ? "Empresa" : undefined}
                 />
                 <KpiCard
-                  label="Ações Realizadas"
+                  label="Ações PQV Realizadas"
                   value={formatInt(kpis.qvRealizada)}
-                  sublabel={`Período: ${periodoAtual.shortLabel}`}
+                  sublabel={`Campanhas e informes • ${periodoAtual.shortLabel}`}
                   icon={HeartHandshake}
                   accent={YELLOW}
                   scopeBadge={segAtivo !== "TODOS" ? "Empresa" : undefined}
@@ -1322,14 +1357,16 @@ function SaudeDashboard({
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <KpiCard
-                      label="Ações Previstas"
+                      label="Ações PQV Previstas"
                       value={formatInt(kpis.qvPrevista)}
+                      sublabel="Campanhas e informes"
                       icon={Calendar}
                       accent={GREEN}
                     />
                     <KpiCard
-                      label="Ações Realizadas"
+                      label="Ações PQV Realizadas"
                       value={formatInt(kpis.qvRealizada)}
+                      sublabel="Campanhas e informes"
                       icon={HeartHandshake}
                       accent={YELLOW}
                     />

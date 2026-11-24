@@ -41,7 +41,18 @@ export type DashboardData = {
   limboPrevidenciario: Record<string, string | number>[];
   qualidadeVida: { mes: string; PREVISTA: number; REALIZADA: number }[];
   qualidadeVidaResumo: { previstaAno: number; realizadaAno: number; taxa: number };
+  testesAlcoolDrogas?: { mes: string; quantidade: number }[];
+  atendimentosSociais?: { mes: string; quantidade: number }[];
 };
+
+/** Valores iniciais de 2026 (acumulado do ano). */
+export const INDICADORES_2026 = {
+  testesAlcoolDrogas: [{ mes: "ACUMULADO 2026", quantidade: 1195 }],
+  atendimentosSociais: [{ mes: "ACUMULADO 2026", quantidade: 411 }],
+};
+
+export const somaQtd = (rows?: { quantidade: number }[]) =>
+  (rows ?? []).reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
 
 export const defaultData: DashboardData = {
   meses: MESES,
@@ -86,6 +97,8 @@ const SHEETS = {
   LIMBO: "Limbo",
   QV: "Qualidade de Vida",
   QV_RESUMO: "QV Resumo",
+  TESTES_AD: "Testes Álcool e Drogas",
+  SOCIAL: "Atendimentos Sociais",
 } as const;
 
 function toNum(v: unknown): number {
@@ -118,6 +131,10 @@ export function exportToExcel(data: DashboardData, fileName = "dashboard-saude.x
   add(SHEETS.LIMBO, data.limboPrevidenciario);
   add(SHEETS.QV, data.qualidadeVida);
   add(SHEETS.QV_RESUMO, [data.qualidadeVidaResumo]);
+  const qtdRows = (r?: { mes: string; quantidade: number }[]) =>
+    r && r.length ? r : MESES.map((mes) => ({ mes, quantidade: 0 }));
+  add(SHEETS.TESTES_AD, qtdRows(data.testesAlcoolDrogas));
+  add(SHEETS.SOCIAL, qtdRows(data.atendimentosSociais));
 
   XLSX.writeFile(wb, fileName);
 }
@@ -196,6 +213,13 @@ export async function importFromExcel(file: File): Promise<DashboardData> {
     REALIZADA: toNum(r.REALIZADA),
   }));
 
+  const readQtd = (name: string) =>
+    readSheet(name)
+      .map((r) => ({ mes: String(r.mes ?? ""), quantidade: toNum(r.quantidade) }))
+      .filter((r) => r.mes);
+  const testesAd = readQtd(SHEETS.TESTES_AD);
+  const social = readQtd(SHEETS.SOCIAL);
+
   const qvResRow = readSheet(SHEETS.QV_RESUMO)[0] ?? {};
   const qvResumo = {
     previstaAno: toNum(qvResRow.previstaAno),
@@ -235,6 +259,8 @@ export async function importFromExcel(file: File): Promise<DashboardData> {
     limboPrevidenciario: limbo.length ? limbo : defaultData.limboPrevidenciario,
     qualidadeVida: qv.length ? qv : defaultData.qualidadeVida,
     qualidadeVidaResumo: qvResRow && Object.keys(qvResRow).length ? qvResumo : defaultData.qualidadeVidaResumo,
+    testesAlcoolDrogas: testesAd,
+    atendimentosSociais: social,
   };
 }
 
@@ -271,6 +297,8 @@ export function makeEmptyData(ano: string): DashboardData {
     limboPrevidenciario: zeroSegMes(SEGMENTOS),
     qualidadeVida: MESES.map((mes) => ({ mes, PREVISTA: 0, REALIZADA: 0 })),
     qualidadeVidaResumo: { previstaAno: 0, realizadaAno: 0, taxa: 0 },
+    testesAlcoolDrogas: MESES.map((mes) => ({ mes, quantidade: 0 })),
+    atendimentosSociais: MESES.map((mes) => ({ mes, quantidade: 0 })),
   };
 }
 
@@ -280,7 +308,7 @@ export const SETORES = [
 ] as const;
 
 export function baseDataFor(setor: string, ano: string): DashboardData {
-  if (setor === "SAUDE" && ano === "2026") return saude2026 as DashboardData;
+  if (setor === "SAUDE" && ano === "2026") return { ...(saude2026 as DashboardData), ...INDICADORES_2026 };
   return setor === "SAUDE" && ano === "2025" ? defaultData : makeEmptyData(ano);
 }
 
@@ -296,7 +324,14 @@ export function useDashboardData(setor: string, ano: string) {
       const raw =
         localStorage.getItem(keyFor(setor, ano)) ??
         (setor === "SAUDE" && ano === "2025" ? localStorage.getItem(STORAGE_KEY) : null);
-      if (raw) next = JSON.parse(raw);
+      if (raw) {
+        const saved = JSON.parse(raw) as DashboardData;
+        next = {
+          ...saved,
+          testesAlcoolDrogas: saved.testesAlcoolDrogas?.length ? saved.testesAlcoolDrogas : next.testesAlcoolDrogas,
+          atendimentosSociais: saved.atendimentosSociais?.length ? saved.atendimentosSociais : next.atendimentosSociais,
+        };
+      }
     } catch {
       /* ignore */
     }
