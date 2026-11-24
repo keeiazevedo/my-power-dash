@@ -3,6 +3,9 @@ import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, ComposedChart,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
 } from "recharts";
+import { Calendar, Filter, X, LayoutDashboard, Car, Plane, Headset, Layers } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getPeriodoOptions, getPeriodoIndices, type PeriodoId } from "@/lib/dashboard-analytics";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
 import { admMonths, computeAdmExecutive, type AdmComparison } from "@/lib/adm-analytics";
 import { useAdmData, importAdm, exportAdm, MESES_ADM, SEGMENTOS_ADM, ANOS_ADM } from "@/lib/adm-store";
@@ -48,19 +51,25 @@ function KPI({ label, value, accent = GREEN, children }: { label: string; value:
 export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a: string) => void; header: React.ReactNode }) {
   const { data, save, reset } = useAdmData(ano);
   const [seg, setSeg] = useState("TODOS");
+  const [periodo, setPeriodo] = useState<PeriodoId>("ANO");
+  const [tab, setTab] = useState("visao-executiva");
+  const periodoOptions = useMemo(() => getPeriodoOptions(MESES_ADM), []);
+  const periodoAtual = periodoOptions.find((p) => p.id === periodo) ?? periodoOptions[0]!;
+  const mesesPeriodo = useMemo(() => new Set(getPeriodoIndices(MESES_ADM, periodo).map((i) => MESES_ADM[i])), [periodo]);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const segList = seg === "TODOS" ? SEGMENTOS_ADM : [seg];
-  const sub = seg === "TODOS" ? "Todos os segmentos" : seg;
-  const uber = useMemo(() => data.uber.filter((r) => segList.includes(r.segmento)), [data, seg]);
-  const via = useMemo(() => data.viagens.filter((r) => segList.includes(r.segmento)), [data, seg]);
+  const sub = `${seg === "TODOS" ? "Todos os segmentos" : seg} • ${periodoAtual.shortLabel}`;
+  const uber = useMemo(() => data.uber.filter((r) => segList.includes(r.segmento) && mesesPeriodo.has(r.mes)), [data, seg, mesesPeriodo]);
+  const via = useMemo(() => data.viagens.filter((r) => segList.includes(r.segmento) && mesesPeriodo.has(r.mes)), [data, seg, mesesPeriodo]);
+  const chamadosRows = useMemo(() => data.chamados.filter((r) => mesesPeriodo.has(r.mes)), [data, mesesPeriodo]);
   const mesesAtivos = useMemo(() => {
     const s = new Set([...data.uber, ...data.viagens, ...data.chamados].map((r) => r.mes));
     const last = Math.max(-1, ...[...s].map((m) => MESES_ADM.indexOf(m)));
-    return MESES_ADM.slice(0, Math.max(last + 1, 1));
-  }, [data]);
+    return MESES_ADM.slice(0, Math.max(last + 1, 1)).filter((m) => mesesPeriodo.has(m));
+  }, [data, mesesPeriodo]);
 
   const bySegMes = (rows: { mes: string; segmento: string }[], val: (r: never) => number) =>
     mesesAtivos.map((mes) => {
@@ -93,13 +102,14 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
     return { mes, ticket: c ? +(v / c).toFixed(2) : 0 };
   });
   const chamados = mesesAtivos.map((mes) => {
-    const c = data.chamados.find((x) => x.mes === mes);
+    const c = chamadosRows.find((x) => x.mes === mes);
     return { mes, Solucionados: c?.solucionados ?? 0, Total: c?.total ?? 0, "% Resolução": c && c.total ? +((c.solucionados / c.total) * 100).toFixed(1) : 0 };
   });
 
   const meses = admMonths(data);
   const [mesSel, setMesSel] = useState<string>("");
-  const mesRef = meses.includes(mesSel) ? mesSel : meses[meses.length - 1] ?? "";
+  const mesPer = periodo.startsWith("M:") ? periodo.slice(2) : "";
+  const mesRef = meses.includes(mesPer) ? mesPer : meses.includes(mesSel) ? mesSel : meses[meses.length - 1] ?? "";
   const exec = useMemo(() => (mesRef ? computeAdmExecutive(data, seg, mesRef) : null), [data, seg, mesRef]);
   const cmp = exec?.comparisons, prev = exec?.previousMonth ?? null;
   const num = (n: number) => Math.round(n).toLocaleString("pt-BR");
@@ -107,8 +117,8 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
   const totUber = uber.reduce((a, r) => a + r.valor, 0);
   const totCorr = uber.reduce((a, r) => a + r.corridas, 0);
   const totVia = via.reduce((a, r) => a + r.valor, 0);
-  const totCh = data.chamados.reduce((a, r) => a + r.total, 0);
-  const totSol = data.chamados.reduce((a, r) => a + r.solucionados, 0);
+  const totCh = chamadosRows.reduce((a, r) => a + r.total, 0);
+  const totSol = chamadosRows.reduce((a, r) => a + r.solucionados, 0);
 
   const handleImport = async (f: File) => {
     setBusy(true); setMsg(null);
@@ -168,18 +178,56 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
               className="rounded-md bg-primary px-3 py-2 text-xs font-semibold uppercase tracking-wide text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50">{busy ? "Importando..." : "Importar planilha base"}</button>
             <button onClick={() => { if (confirm("Restaurar dados iniciais?")) { reset(); setMsg("Dados restaurados."); } }}
               className="rounded-md border bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm hover:bg-muted">Restaurar</button>
-            <label className="ml-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Segmento</label>
-            <select value={seg} onChange={(e) => setSeg(e.target.value)}
-              className="rounded-md border bg-white px-3 py-2 text-sm font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
-              <option value="TODOS">Todos</option>
-              {SEGMENTOS_ADM.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
           </div>
         </div>
         {msg && <div className="mx-auto max-w-[1400px] px-4 pb-3 text-xs text-muted-foreground">{msg}</div>}
       </header>
 
+      <div className="sticky top-0 z-20 border-b bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-primary" />
+              <label htmlFor="adm-periodo" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Período</label>
+              <select id="adm-periodo" value={periodo} onChange={(e) => setPeriodo(e.target.value as PeriodoId)}
+                className="rounded-md border bg-white px-2.5 py-1.5 text-xs font-medium text-foreground shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary">
+                <optgroup label="Visão Anual e Semestral">{periodoOptions.filter((o) => o.group === "visao" || o.group === "semestre").map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</optgroup>
+                <optgroup label="Trimestres">{periodoOptions.filter((o) => o.group === "trimestre").map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</optgroup>
+                <optgroup label="Mês Específico">{periodoOptions.filter((o) => o.group === "mes").map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</optgroup>
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Filter className="h-3.5 w-3.5 text-primary" />
+              <label htmlFor="adm-segmento" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Segmento</label>
+              <select id="adm-segmento" value={seg} onChange={(e) => setSeg(e.target.value)}
+                className="rounded-md border bg-white px-2.5 py-1.5 text-xs font-medium text-foreground shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="TODOS">Todos os segmentos</option>
+                {SEGMENTOS_ADM.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            {(periodo !== "ANO" || seg !== "TODOS") && (
+              <div className="flex flex-wrap items-center gap-1.5 border-l pl-3">
+                {periodo !== "ANO" && <button type="button" onClick={() => setPeriodo("ANO")} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/20">{periodoAtual.shortLabel}<X className="h-3 w-3" /></button>}
+                {seg !== "TODOS" && <button type="button" onClick={() => setSeg("TODOS")} className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900 hover:bg-amber-200">{seg}<X className="h-3 w-3" /></button>}
+                <button type="button" onClick={() => { setPeriodo("ANO"); setSeg("TODOS"); }} className="text-xs font-medium text-muted-foreground underline hover:text-foreground">Limpar filtros</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       <main className="mx-auto max-w-[1400px] space-y-6 px-4 py-6">
+        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="inline-flex h-auto min-w-max flex-wrap justify-start gap-1 rounded-xl bg-muted/80 p-1.5">
+              <TabsTrigger value="visao-executiva" className="gap-1.5 py-1.5 text-xs sm:text-sm"><LayoutDashboard className="h-4 w-4" />Visão Executiva</TabsTrigger>
+              <TabsTrigger value="uber" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Car className="h-4 w-4" />Uber</TabsTrigger>
+              <TabsTrigger value="viagens" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Plane className="h-4 w-4" />Viagens</TabsTrigger>
+              <TabsTrigger value="chamados" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Headset className="h-4 w-4" />Chamados</TabsTrigger>
+              <TabsTrigger value="visao-completa" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Layers className="h-4 w-4" />Visão Completa</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="visao-executiva" className="space-y-6">
         {exec && (
           <>
             <div className="flex flex-wrap items-center gap-2">
@@ -198,9 +246,106 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
               <KPI label={`Chamados • ${mesRef}`} value={cmp?.chamados.current != null ? num(cmp.chamados.current) : "—"}><Delta c={cmp?.chamados} fmt={num} prev={prev} goodDown={false} /></KPI>
               <KPI label={`% Resolução • ${mesRef}`} value={cmp?.resolucao.current != null ? `${cmp.resolucao.current.toFixed(1)}%` : "—"} accent={YELLOW}><Delta c={cmp?.resolucao} fmt={num} prev={prev} goodDown={false} pp /></KPI>
             </section>
-            <h2 className="pt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Acumulado do ano</h2>
+            <h2 className="pt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Acumulado • {periodoAtual.shortLabel}</h2>
           </>
         )}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <KPI label="Gasto Uber" value={brl(totUber)} />
+          <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
+          <KPI label="Ticket médio Uber" value={brl(totCorr ? totUber / totCorr : 0)} />
+          <KPI label="Gasto Viagens" value={brl(totVia)} accent={YELLOW} />
+          <KPI label="Chamados Administrativo" value={totCh.toLocaleString("pt-BR")} />
+          <KPI label="% Resolução" value={`${totCh ? ((totSol / totCh) * 100).toFixed(1) : 0}%`} accent={YELLOW} />
+        </section>
+
+          </TabsContent>
+          <TabsContent value="uber" className="space-y-6">
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card title="Gasto Uber por Mês" subtitle={sub}>{segBars(uberValorMes, true)}</Card>
+          <Card title="Corridas Uber por Mês" subtitle={sub}>{segBars(uberCorridasMes, false)}</Card>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Card title="Uber por Segmento" subtitle="Valor acumulado">{pie(uberSeg, true)}</Card>
+          <Card title="Uber por Tipo de Serviço" subtitle={sub}>
+            <ResponsiveContainer>
+              <BarChart data={uberServico} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={kfmt} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
+                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
+                <Bar dataKey="value" name="Valor" fill={GREEN} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+          <Card title="Ticket Médio Uber" subtitle={sub}>
+            <ResponsiveContainer>
+              <LineChart data={ticket}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis {...xMes} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
+                <Line type="monotone" dataKey="ticket" name="Ticket médio" stroke={YELLOW} strokeWidth={3} dot={{ fill: GREEN, r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </section>
+
+          </TabsContent>
+          <TabsContent value="viagens" className="space-y-6">
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card title="Gasto com Viagens por Mês" subtitle={sub}>{segBars(viaValorMes, true)}</Card>
+          <Card title="Viagens por Produto (Top 5)" subtitle={sub}>
+            <ResponsiveContainer>
+              <LineChart data={viaProdMes}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis {...xMes} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={kfmt} />
+                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                {topProdutos.map((p, i) => <Line key={p} type="monotone" dataKey={p} stroke={PALETTE[i]} strokeWidth={2} dot={{ r: 3 }} />)}
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Card title="Viagens por Segmento" subtitle="Valor acumulado">{pie(viaSeg, true)}</Card>
+          <Card title="Viagens por Produto" subtitle={sub} className="lg:col-span-2">
+            <ResponsiveContainer>
+              <BarChart data={viaProduto} margin={{ bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={kfmt} />
+                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
+                <Bar dataKey="value" name="Valor" fill={YELLOW} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </section>
+
+          </TabsContent>
+          <TabsContent value="chamados" className="space-y-6">
+        <section>
+          <Card title="CHAMADO DO ADMINISTRATIVO - SOLUCIONADOS X TOTAL" subtitle={`Todos os segmentos (sem divisão por segmento na planilha) • ${periodoAtual.shortLabel}`}>
+            <ResponsiveContainer>
+              <ComposedChart data={chamados}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis {...xMes} />
+                <YAxis yAxisId="l" tick={{ fontSize: 11 }} />
+                <YAxis yAxisId="r" orientation="right" domain={[80, 100]} tick={{ fontSize: 11 }} unit="%" />
+                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar yAxisId="l" dataKey="Total" fill={GREEN} radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="l" dataKey="Solucionados" fill={YELLOW} radius={[4, 4, 0, 0]} />
+                <Line yAxisId="r" type="monotone" dataKey="% Resolução" stroke={GREEN_MARK} strokeWidth={2} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </Card>
+        </section>
+
+          </TabsContent>
+          <TabsContent value="visao-completa" className="space-y-6">
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <KPI label="Gasto Uber" value={brl(totUber)} />
           <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
@@ -273,7 +418,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
         </section>
 
         <section>
-          <Card title="CHAMADO DO ADMINISTRATIVO - SOLUCIONADOS X TOTAL" subtitle="Todos os segmentos (sem divisão por segmento na planilha)">
+          <Card title="CHAMADO DO ADMINISTRATIVO - SOLUCIONADOS X TOTAL" subtitle={`Todos os segmentos (sem divisão por segmento na planilha) • ${periodoAtual.shortLabel}`}>
             <ResponsiveContainer>
               <ComposedChart data={chamados}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -289,6 +434,9 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
             </ResponsiveContainer>
           </Card>
         </section>
+
+          </TabsContent>
+        </Tabs>
 
         <footer className="pt-4 text-center text-xs text-muted-foreground">Setor Administrativo • Ano {ano} • Cores da marca Bravante</footer>
       </main>
