@@ -233,7 +233,7 @@ export function previewAnalysis(health: DashboardData, adm: AdmData, filters: Pr
       months.includes(r.mes) && (segment === "TODOS" || r.segmento === segment);
     const scoped: AdmData = {
       uber: adm.uber.filter(matches),
-      viagens: adm.viagens.filter(matches),
+      viagens: adm.viagens.filter((r) => months.includes(r.mes) && (segment === "TODOS" || r.segmento === segment || r.segmento === "GERAL")),
       chamados: adm.chamados.filter((r) => months.includes(r.mes)),
       quantidadeViagensTotal:
         period === "ANO" && segment === "TODOS" ? adm.quantidadeViagensTotal : null,

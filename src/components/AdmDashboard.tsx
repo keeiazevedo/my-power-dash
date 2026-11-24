@@ -11,6 +11,7 @@ import { admMonths, computeAdmExecutive, computeAdmYear, type AdmComparison } fr
 import { segColor } from "@/lib/segment-colors";
 import { useAdmData, importAdm, exportAdm, MESES_ADM, SEGMENTOS_ADM, ANOS_ADM } from "@/lib/adm-store";
 
+import { ViagensSection } from "@/components/dashboard/adm-viagens";
 import { DashboardDisplayControls } from "@/components/dashboard/dashboard-experience";
 import { KpiSeriesContext, KpiSparkline } from "@/components/dashboard/kpi-sparkline";
 import { DashboardAssistant } from "@/components/dashboard/dashboard-assistant";
@@ -70,7 +71,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
   const segList = seg === "TODOS" ? SEGMENTOS_ADM : [seg];
   const sub = `${seg === "TODOS" ? "Todos os segmentos" : seg} • ${periodoAtual.shortLabel}`;
   const uber = useMemo(() => data.uber.filter((r) => segList.includes(r.segmento) && mesesPeriodo.has(r.mes)), [data, seg, mesesPeriodo]);
-  const via = useMemo(() => data.viagens.filter((r) => segList.includes(r.segmento) && mesesPeriodo.has(r.mes)), [data, seg, mesesPeriodo]);
+  const via = useMemo(() => data.viagens.filter((r) => (r.segmento === "GERAL" || segList.includes(r.segmento)) && mesesPeriodo.has(r.mes)), [data, seg, mesesPeriodo]);
   const chamadosRows = useMemo(() => data.chamados.filter((r) => mesesPeriodo.has(r.mes)), [data, mesesPeriodo]);
   const mesesAtivos = useMemo(() => {
     const s = new Set([...data.uber, ...data.viagens, ...data.chamados].map((r) => r.mes));
@@ -92,17 +93,8 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
 
   const uberValorMes = bySegMes(uber, (r: { valor: number }) => r.valor);
   const uberCorridasMes = bySegMes(uber, (r: { corridas: number }) => r.corridas);
-  const viaValorMes = bySegMes(via, (r: { valor: number }) => r.valor);
   const uberServico = sumBy(uber, (r) => r.servico, (r) => r.valor).slice(0, 8);
   const uberSeg = sumBy(uber, (r) => r.segmento, (r) => r.valor);
-  const viaProduto = sumBy(via, (r) => r.produto, (r) => r.valor).slice(0, 5);
-  const viaSeg = sumBy(via, (r) => r.segmento, (r) => r.valor);
-  const topProdutos = viaProduto.slice(0, 5).map((p) => p.name);
-  const viaProdMes = mesesAtivos.map((mes) => {
-    const o: Record<string, string | number> = { mes };
-    topProdutos.forEach((p) => (o[p] = +via.filter((r) => r.mes === mes && r.produto === p).reduce((a, r) => a + r.valor, 0).toFixed(2)));
-    return o;
-  });
   const ticket = mesesAtivos.map((mes) => {
     const rs = uber.filter((r) => r.mes === mes);
     const v = rs.reduce((a, r) => a + r.valor, 0), c = rs.reduce((a, r) => a + r.corridas, 0);
@@ -345,36 +337,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
 
           </TabsContent>
           <TabsContent value="viagens" className="space-y-6">
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Custo com Viagens por Mês" subtitle={sub}>{segBars(viaValorMes, true)}</Card>
-          <Card title="Viagens por Produto (Top 5)" subtitle={sub}>
-            <ResponsiveContainer>
-              <LineChart data={viaProdMes}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis {...xMes} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={kfmt} />
-                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                {topProdutos.map((p, i) => <Line key={p} type="monotone" dataKey={p} stroke={PALETTE[i]} strokeWidth={2} dot={{ r: 3 }} />)}
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Card title="Viagens por Segmento" subtitle="Valor acumulado">{pie(viaSeg, true)}</Card>
-          <Card title="Viagens por Produto" subtitle={sub} className="lg:col-span-2">
-            <ResponsiveContainer>
-              <BarChart data={viaProduto} margin={{ bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={kfmt} />
-                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
-                <Bar dataKey="value" name="Valor" fill={YELLOW} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </section>
+        <ViagensSection data={data} via={via} meses={mesesAtivos} sub={sub} />
 
           </TabsContent>
           <TabsContent value="chamados" className="space-y-6">
@@ -446,36 +409,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
           </Card>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Custo com Viagens por Mês" subtitle={sub}>{segBars(viaValorMes, true)}</Card>
-          <Card title="Viagens por Produto (Top 5)" subtitle={sub}>
-            <ResponsiveContainer>
-              <LineChart data={viaProdMes}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis {...xMes} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={kfmt} />
-                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                {topProdutos.map((p, i) => <Line key={p} type="monotone" dataKey={p} stroke={PALETTE[i]} strokeWidth={2} dot={{ r: 3 }} />)}
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Card title="Viagens por Segmento" subtitle="Valor acumulado">{pie(viaSeg, true)}</Card>
-          <Card title="Viagens por Produto" subtitle={sub} className="lg:col-span-2">
-            <ResponsiveContainer>
-              <BarChart data={viaProduto} margin={{ bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={kfmt} />
-                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
-                <Bar dataKey="value" name="Valor" fill={YELLOW} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </section>
+        <ViagensSection data={data} via={via} meses={mesesAtivos} sub={sub} />
 
         <section>
           <Card title="CHAMADO DO ADMINISTRATIVO - SOLUCIONADOS X TOTAL" subtitle={`Todos os segmentos (sem divisão por segmento na planilha) • ${periodoAtual.shortLabel}`}>

@@ -8,6 +8,16 @@ export const ANOS_ADM = ["2026", "2027", "2028"];
 
 export type UberRow = { mes: string; segmento: string; servico: string; valor: number; corridas: number };
 export type ViagemRow = { mes: string; segmento: string; produto: string; valor: number; quantidade?: number };
+/** Aba de viagens no mesmo formato da planilha VIAGENS GERAL: título na A1, cabeçalho na linha indicada. */
+export type ViagemTabela = { aba: string; titulo: string; linhaCabecalho: number; cabecalho: string[]; linhas: (string | number | null)[][] };
+export const ABAS_VIAGENS = [
+  "TOP 10 Trechos", "TOP 10 Hotéis", "TOP 10 Locadoras", "TOP 10 VIAJANTES AÉREO", "TOP 10 VIAJANTES HOTEL",
+  "TOP 10 VIAJANTES CARRO", "TOP 10 Centros Custo", "Fora Política AÉREO", "Saving Aéreo Jan-Out", "Fora Política HOTEL",
+  "Carro Fora 48 Horas", "Resumo Antecedência", "TOP 10 Carro Viajantes", "CONSOLIDADO PRODUTO GERAL", "CONSOLIDADO PRODUTO MÊS A MÊS",
+];
+export const ABA_MES_A_MES = "CONSOLIDADO PRODUTO MÊS A MÊS";
+/** Viagens não têm segmento na planilha: representam o setor inteiro. */
+export const SEGMENTO_GERAL = "GERAL";
 export type ChamadoRow = { mes: string; solucionados: number; total: number };
 export type AdmData = {
   uber: UberRow[];
@@ -15,10 +25,26 @@ export type AdmData = {
   chamados: ChamadoRow[];
   /** Total anual informado sem distribuição por mês, produto ou segmento. */
   quantidadeViagensTotal: number | null;
+  viagensTabelas?: ViagemTabela[];
 };
 
 const empty: AdmData = { uber: [], viagens: [], chamados: [], quantidadeViagensTotal: null };
-export const baseAdm = (ano: string): AdmData => (ano === "2026" || ano === "2025" ? (base2026 as AdmData) : empty);
+const MES_NOME: Record<string, string> = { JANEIRO: "JAN", FEVEREIRO: "FEV", MARCO: "MAR", ABRIL: "ABR", MAIO: "MAI", JUNHO: "JUN", JULHO: "JUL", AGOSTO: "AGO", SETEMBRO: "SET", OUTUBRO: "OUT", NOVEMBRO: "NOV", DEZEMBRO: "DEZ" };
+/** Converte a aba "CONSOLIDADO PRODUTO MÊS A MÊS" em linhas mensais por produto. */
+export function viagensFromTabelas(tabs: ViagemTabela[]): ViagemRow[] {
+  const t = tabs.find((x) => norm(x.aba) === norm(ABA_MES_A_MES));
+  if (!t) return [];
+  const cols = t.cabecalho.map((h) => MES_NOME[norm(h)] ?? "");
+  const out: ViagemRow[] = [];
+  for (const r of t.linhas) {
+    const produto = String(r[0] ?? "").trim();
+    if (!produto || norm(produto).startsWith("TOTAL")) continue;
+    cols.forEach((mes, i) => { if (mes && r[i] !== null && r[i] !== "" && r[i] !== undefined) out.push({ mes, segmento: SEGMENTO_GERAL, produto, valor: num(r[i]) }); });
+  }
+  return out;
+}
+const withViagens = (d: AdmData): AdmData => (d.viagensTabelas?.length ? { ...d, viagens: viagensFromTabelas(d.viagensTabelas) } : d);
+export const baseAdm = (ano: string): AdmData => (ano === "2026" || ano === "2025" ? withViagens(base2026 as AdmData) : empty);
 
 const norm = (s: unknown) =>
   String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
@@ -60,8 +86,24 @@ export async function importAdm(file: File): Promise<AdmData> {
     uberMap.set(k, cur);
   }
 
+  const viagensTabelas: ViagemTabela[] = [];
+  for (const aba of ABAS_VIAGENS) {
+    const n = wb.SheetNames.find((s) => norm(s) === norm(aba));
+    if (!n) continue;
+    const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(wb.Sheets[n], { header: 1, defval: null, blankrows: true });
+    const clean = rows.map((r) => r.map((v) => (typeof v === "string" ? v.trim() || null : v ?? null)));
+    const h = clean.findIndex((r) => r.filter((v) => v !== null).length >= 3);
+    if (h < 0) continue;
+    const cabecalho = clean[h]!.map((v) => String(v ?? ""));
+    while (cabecalho.length && !cabecalho[cabecalho.length - 1]) cabecalho.pop();
+    const linhas = clean.slice(h + 1).map((r) => Array.from({ length: cabecalho.length }, (_, i) => r[i] ?? null));
+    while (linhas.length && linhas[linhas.length - 1]!.every((v) => v === null)) linhas.pop();
+    const titulo = String(clean.flat().find((v) => v !== null) ?? aba);
+    viagensTabelas.push({ aba, titulo, linhaCabecalho: h + 1, cabecalho, linhas });
+  }
+
   const viaMap = new Map<string, ViagemRow>();
-  for (const r of find("Planilha5", "Viagens Base", "Viagens")) {
+  for (const r of viagensTabelas.length ? [] : find("Planilha5", "Viagens Base", "Viagens")) {
     const mes = toMes(pick(r, "Ref Mês", "Mes", "Mês"));
     const segmento = toSeg(pick(r, "Área", "Area", "Segmento"));
     const produto = String(pick(r, "Produto Final", "Produto") ?? "").trim();
@@ -87,24 +129,33 @@ export async function importAdm(file: File): Promise<AdmData> {
   );
   const quantidadeViagensTotal = totalRow ? num(pick(totalRow, "Valor", "Quantidade", "Total")) : null;
 
-  const out: AdmData = { uber: [...uberMap.values()], viagens: [...viaMap.values()], chamados, quantidadeViagensTotal };
+  const out: AdmData = viagensTabelas.length
+    ? { uber: [...uberMap.values()], viagens: viagensFromTabelas(viagensTabelas), chamados, quantidadeViagensTotal, viagensTabelas }
+    : { uber: [...uberMap.values()], viagens: [...viaMap.values()], chamados, quantidadeViagensTotal };
   if (!out.uber.length && !out.viagens.length && !out.chamados.length)
-    throw new Error("Não encontrei as abas Uber, Planilha5 ou Chamados na planilha.");
+    throw new Error("Não encontrei as abas Uber, Chamados ou de Viagens na planilha.");
   return out;
 }
 
 /** Template no mesmo formato da planilha base (abas Uber, Planilha5, Chamados e Indicadores). */
-export function exportAdm(d: AdmData, fileName: string) {
+export function buildAdmWorkbook(d: AdmData) {
   const wb = XLSX.utils.book_new();
   const nome = (m: string) => ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"][MESES_ADM.indexOf(m)];
   const uber = d.uber.length ? d.uber : [{ mes: "JAN", segmento: "OFFSHORE", servico: "UberX", valor: 0, corridas: 0 }];
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(uber.map((r) => ({
     "Referência": nome(r.mes), Segmento: r.segmento, "Serviço": `Travel | ${r.servico}`, "Total Geral": +r.valor.toFixed(2), Corridas: r.corridas,
   }))), "Uber");
-  const via = d.viagens.length ? d.viagens : [{ mes: "JAN", segmento: "OFFSHORE", produto: "AÉREO", valor: 0 }];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(via.map((r) => ({
-    "Área": r.segmento, "Ref Mês": nome(r.mes), "Produto Final": r.produto, "Soma de Total Cliente": +r.valor.toFixed(2), "Quantidade de Viagens": r.quantidade ?? "",
-  }))), "Planilha5");
+  const tabs = d.viagensTabelas?.length ? d.viagensTabelas : (base2026 as AdmData).viagensTabelas ?? [];
+  for (const aba of ABAS_VIAGENS) {
+    const t = tabs.find((x) => norm(x.aba) === norm(aba));
+    if (!t) continue;
+    const aoa: (string | number | null)[][] = [[t.titulo]];
+    while (aoa.length < t.linhaCabecalho - 1) aoa.push([]);
+    aoa.push(t.cabecalho, ...t.linhas);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = t.cabecalho.map((h, i) => ({ wch: i === 1 || i === 0 ? 34 : Math.max(14, h.length + 2) }));
+    XLSX.utils.book_append_sheet(wb, ws, aba.slice(0, 31));
+  }
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(MESES_ADM.map((m) => {
     const c = d.chamados.find((x) => x.mes === m);
     return { "Período": nome(m), "N° De Chamados Solucionados": c?.solucionados ?? "", "N° Total de Chamados": c?.total ?? "" };
@@ -112,7 +163,10 @@ export function exportAdm(d: AdmData, fileName: string) {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
     { Indicador: "Quantidade de Viagens", Valor: d.quantidadeViagensTotal ?? "" },
   ]), "Indicadores");
-  XLSX.writeFile(wb, fileName);
+  return wb;
+}
+export function exportAdm(d: AdmData, fileName: string) {
+  XLSX.writeFile(buildAdmWorkbook(d), fileName);
 }
 
 const key = (ano: string) => `dashboard-adm-${ano}`;
@@ -126,6 +180,11 @@ export function useAdmData(ano: string) {
       const raw = localStorage.getItem(key(ano));
       if (raw) {
         const saved = JSON.parse(raw) as AdmData;
+        // Dados salvos antes da nova estrutura de viagens recebem a base atual de viagens.
+        if (!saved.viagensTabelas?.length && base.viagensTabelas?.length) {
+          saved.viagens = base.viagens;
+          saved.viagensTabelas = base.viagensTabelas;
+        }
         next = {
           ...saved,
           quantidadeViagensTotal: Object.prototype.hasOwnProperty.call(saved, "quantidadeViagensTotal")

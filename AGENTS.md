@@ -16,3 +16,4 @@
 - Use `demo-analysis` for local descriptive reports in preview and official dashboards; respect year and filters, invalidate stale reports, and never allocate annual-only totals to months or segments.
 - Share official search/report controls through `DashboardAssistant` and tab-aware `indicator-search` entries; data-indicator targets let search navigate without changing filters or datasets.
 - Apply the shared health-status projection to status charts, spreadsheet import/export, defaults and loaded browser data; keep the separate limbo dataset untouched so legacy files cannot restore removed status series.
+- Administrativo travel data lives as `viagensTabelas` (one entry per VIAGENS GERAL sheet, exported/imported verbatim); monthly `viagens` rows are derived from the month-by-month sheet with segment "GERAL", which ignores segment filters like chamados.

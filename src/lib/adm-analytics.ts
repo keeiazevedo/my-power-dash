@@ -25,7 +25,8 @@ export function compareAdm(current: number | null, previous: number | null): Adm
 function monthMetrics(data: AdmData, month: string, segment: string): Record<AdmMetric, number | null> {
   const match = (r: { mes: string; segmento: string }) => r.mes === month && (segment === "TODOS" || r.segmento === segment);
   const uber = data.uber.filter(match);
-  const viagens = data.viagens.filter(match);
+  // Viagens sem segmento ("GERAL") representam o setor inteiro, como os chamados.
+  const viagens = data.viagens.filter(r => r.mes === month && (segment === "TODOS" || r.segmento === segment || r.segmento === "GERAL"));
   // Chamados have no segment field: they always represent the whole department.
   const chamados = data.chamados.filter(r => r.mes === month);
   const cost = uber.reduce((s, r) => s + r.valor, 0);
@@ -61,7 +62,7 @@ export function computeAdmExecutive(data: AdmData, segment: string, month: strin
   }
 
   if (previousMonth) {
-    const segments = [...new Set([...data.uber, ...data.viagens].map(r => r.segmento))].filter(s => segment === "TODOS" || s === segment);
+    const segments = [...new Set(data.uber.map(r => r.segmento))].filter(s => segment === "TODOS" || s === segment);
     const increases = segments.flatMap(s => {
       const a = monthMetrics(data, month, s), b = monthMetrics(data, previousMonth, s);
       if (a.uber === null || a.viagens === null || b.uber === null || b.viagens === null) return [];
@@ -93,9 +94,9 @@ export function computeAdmYear(data: AdmData, segment: string) {
   const avg = total / months.length;
   if (peak) insights.push({ id: "pico", tone: "warning", title: `Mês de maior custo: ${peak.m}`, description: `${money(peak.v)}, ${pct(avg ? (peak.v / avg - 1) * 100 : 0)}% acima da média mensal de ${money(avg)}.` });
   if (segment === "TODOS") {
-    const segs = [...new Set([...data.uber, ...data.viagens].map(r => r.segmento))].map(s => ({ s, v: [...data.uber, ...data.viagens].filter(r => r.segmento === s).reduce((a, r) => a + r.valor, 0) })).sort((a, b) => b.v - a.v);
+    const segs = [...new Set([...data.uber, ...data.viagens].map(r => r.segmento))].filter(s => s !== "GERAL").map(s => ({ s, v: [...data.uber, ...data.viagens].filter(r => r.segmento === s).reduce((a, r) => a + r.valor, 0) })).sort((a, b) => b.v - a.v);
     const top = segs[0];
-    if (top) insights.push({ id: "seg-top", tone: "neutral", title: `Segmento de maior custo: ${top.s}`, description: `${money(top.v)} no ano, ${pct(total ? top.v / total * 100 : 0)}% do custo total de Uber e viagens.` });
+    if (top) insights.push({ id: "seg-top", tone: "neutral", title: `Segmento de maior custo: ${top.s}`, description: `${money(top.v)} no ano, ${pct(uberT ? top.v / uberT * 100 : 0)}% do custo de Uber (viagens não têm divisão por segmento na planilha).` });
   }
   const lastV = per[per.length - 1]!, lastCost = (lastV.uber ?? 0) + (lastV.viagens ?? 0);
   if (months.length > 1) {
