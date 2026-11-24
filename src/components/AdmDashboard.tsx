@@ -123,7 +123,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
         <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
         <XAxis {...xMes} />
         <YAxis tick={{ fontSize: 11 }} tickFormatter={money ? kfmt : undefined} />
-        <Tooltip contentStyle={tip} formatter={(v: number) => (money ? brl(v) : v)} />
+        <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => (money ? brl(v) : v)} />
         <Legend wrapperStyle={{ fontSize: 11 }} />
         {segList.map((s) => <Bar key={s} dataKey={s} stackId="a" fill={SEG_COLORS[s]} />)}
       </BarChart>
@@ -135,7 +135,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
         <Pie data={rows} dataKey="value" nameKey="name" innerRadius={45} outerRadius={90} paddingAngle={2}>
           {rows.map((r, i) => <Cell key={r.name} fill={(seg && SEG_COLORS[r.name]) || PALETTE[i % PALETTE.length]} />)}
         </Pie>
-        <Tooltip contentStyle={tip} formatter={(v: number) => brl(v)} />
+        <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
         <Legend wrapperStyle={{ fontSize: 11 }} />
       </PieChart>
     </ResponsiveContainer>
@@ -223,7 +223,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={kfmt} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-                <Tooltip contentStyle={tip} formatter={(v: number) => brl(v)} />
+                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
                 <Bar dataKey="value" name="Valor" fill={GREEN} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -234,7 +234,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis {...xMes} />
                 <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={tip} formatter={(v: number) => brl(v)} />
+                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
                 <Line type="monotone" dataKey="ticket" name="Ticket médio" stroke={YELLOW} strokeWidth={3} dot={{ fill: GREEN, r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -249,7 +249,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis {...xMes} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={kfmt} />
-                <Tooltip contentStyle={tip} formatter={(v: number) => brl(v)} />
+                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 {topProdutos.map((p, i) => <Line key={p} type="monotone" dataKey={p} stroke={PALETTE[i]} strokeWidth={2} dot={{ r: 3 }} />)}
               </LineChart>
@@ -265,7 +265,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={kfmt} />
-                <Tooltip contentStyle={tip} formatter={(v: number) => brl(v)} />
+                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
                 <Bar dataKey="value" name="Valor" fill={YELLOW} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -280,7 +280,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
                 <XAxis {...xMes} />
                 <YAxis yAxisId="l" tick={{ fontSize: 11 }} />
                 <YAxis yAxisId="r" orientation="right" domain={[80, 100]} tick={{ fontSize: 11 }} unit="%" />
-                <Tooltip contentStyle={tip} />
+                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar yAxisId="l" dataKey="Total" fill={GREEN} radius={[4, 4, 0, 0]} />
                 <Bar yAxisId="l" dataKey="Solucionados" fill={YELLOW} radius={[4, 4, 0, 0]} />

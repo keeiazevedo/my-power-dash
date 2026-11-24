@@ -82,7 +82,7 @@ export function BrandTooltip({
     <div className="min-w-[170px] rounded-lg border bg-white p-2.5 text-xs shadow-lg">
       {label && <div className="mb-1.5 border-b pb-1 font-semibold text-foreground">{label}</div>}
       <div className="space-y-1">
-        {payload.map((entry, idx) => (
+        {[...payload].sort((a, b) => (typeof b.value === "number" ? b.value : -Infinity) - (typeof a.value === "number" ? a.value : -Infinity)).map((entry, idx) => (
           <div key={idx} className="flex items-center justify-between gap-4">
             <span className="flex items-center gap-1.5 text-muted-foreground">
               <span
