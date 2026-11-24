@@ -362,72 +362,92 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
           </TabsContent>
           <TabsContent value="visao-completa" className="space-y-6">
         <div className="space-y-4">
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <KPI label="Chamados Administrativos" value={totCh.toLocaleString("pt-BR")} />
-            <KPI label="Taxa de Resolução" value={`${totCh ? ((totSol / totCh) * 100).toFixed(1) : 0}%`} accent={YELLOW} />
+          <section>
+            <div className="mb-2 border-l-4 border-primary pl-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">Chamados Administrativos</h2>
+              <p className="text-xs text-muted-foreground">{`Todos os segmentos • ${periodoAtual.shortLabel}`}</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <KPI label="Chamados Administrativos" value={totCh.toLocaleString("pt-BR")} />
+              <KPI label="Taxa de Resolução" value={`${totCh ? ((totSol / totCh) * 100).toFixed(1) : 0}%`} accent={YELLOW} />
+            </div>
           </section>
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <KPI label="Custo Uber" value={brl(totUber)} />
-            <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
-            <KPI label="Ticket Médio Uber" value={brl(totCorr ? totUber / totCorr : 0)} />
+
+          <section>
+            <Card title="CHAMADO DO ADMINISTRATIVO - SOLUCIONADOS X TOTAL" subtitle={`Todos os segmentos (sem divisão por segmento na planilha) • ${periodoAtual.shortLabel}`}>
+              <ResponsiveContainer>
+                <ComposedChart data={chamados}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                  <XAxis {...xMes} />
+                  <YAxis yAxisId="l" tick={{ fontSize: 11 }} />
+                  <YAxis yAxisId="r" orientation="right" domain={[80, 100]} tick={{ fontSize: 11 }} unit="%" />
+                  <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar yAxisId="l" dataKey="Total" fill={GREEN} radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="l" dataKey="Solucionados" fill={YELLOW} radius={[4, 4, 0, 0]} />
+                  <Line yAxisId="r" type="monotone" dataKey="% Resolução" stroke={GREEN_MARK} strokeWidth={2} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </Card>
           </section>
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <KPI label="Custo Viagens" value={brl(totVia)} accent={YELLOW} />
-            <KPI label="Quantidade de Viagens" value={totQtd ? totQtd.toLocaleString("pt-BR") : "—"} />
-            <KPI label="Ticket Médio Viagens" value={totQtd ? brl(totVia / totQtd) : "—"} accent={YELLOW} />
+
+          <section>
+            <div className="mb-2 border-l-4 border-primary pl-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">Custo Uber</h2>
+              <p className="text-xs text-muted-foreground">{sub}</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <KPI label="Custo Uber" value={brl(totUber)} />
+              <KPI label="Corridas Uber" value={totCorr.toLocaleString("pt-BR")} accent={YELLOW} />
+              <KPI label="Ticket Médio Uber" value={brl(totCorr ? totUber / totCorr : 0)} />
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card title="Custo Uber por Mês" subtitle={sub}>{segBars(uberValorMes, true)}</Card>
+            <Card title="Corridas Uber por Mês" subtitle={sub}>{segBars(uberCorridasMes, false)}</Card>
+          </section>
+
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Card title="Uber por Segmento" subtitle="Valor acumulado">{pie(uberSeg, true)}</Card>
+            <Card title="Uber por Tipo de Serviço" subtitle={sub}>
+              <ResponsiveContainer>
+                <BarChart data={uberServico} layout="vertical" margin={{ left: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={kfmt} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
+                  <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
+                  <Bar dataKey="value" name="Valor" fill={GREEN} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+            <Card title="Ticket Médio Uber" subtitle={sub}>
+              <ResponsiveContainer>
+                <LineChart data={ticket}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                  <XAxis {...xMes} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
+                  <Line type="monotone" dataKey="ticket" name="Ticket médio" stroke={YELLOW} strokeWidth={3} dot={{ fill: GREEN, r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </Card>
+          </section>
+
+          <section>
+            <div className="mb-2 border-l-4 border-primary pl-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">Custo Viagens</h2>
+              <p className="text-xs text-muted-foreground">{sub}</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <KPI label="Custo Viagens" value={brl(totVia)} accent={YELLOW} />
+              <KPI label="Quantidade de Viagens" value={totQtd ? totQtd.toLocaleString("pt-BR") : "—"} />
+              <KPI label="Ticket Médio Viagens" value={totQtd ? brl(totVia / totQtd) : "—"} accent={YELLOW} />
+            </div>
           </section>
         </div>
 
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="Custo Uber por Mês" subtitle={sub}>{segBars(uberValorMes, true)}</Card>
-          <Card title="Corridas Uber por Mês" subtitle={sub}>{segBars(uberCorridasMes, false)}</Card>
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Card title="Uber por Segmento" subtitle="Valor acumulado">{pie(uberSeg, true)}</Card>
-          <Card title="Uber por Tipo de Serviço" subtitle={sub}>
-            <ResponsiveContainer>
-              <BarChart data={uberServico} layout="vertical" margin={{ left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={kfmt} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
-                <Bar dataKey="value" name="Valor" fill={GREEN} radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-          <Card title="Ticket Médio Uber" subtitle={sub}>
-            <ResponsiveContainer>
-              <LineChart data={ticket}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis {...xMes} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} formatter={(v: number) => brl(v)} />
-                <Line type="monotone" dataKey="ticket" name="Ticket médio" stroke={YELLOW} strokeWidth={3} dot={{ fill: GREEN, r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-        </section>
-
         <ViagensSection data={data} via={via} meses={mesesAtivos} sub={sub} />
-
-        <section>
-          <Card title="CHAMADO DO ADMINISTRATIVO - SOLUCIONADOS X TOTAL" subtitle={`Todos os segmentos (sem divisão por segmento na planilha) • ${periodoAtual.shortLabel}`}>
-            <ResponsiveContainer>
-              <ComposedChart data={chamados}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis {...xMes} />
-                <YAxis yAxisId="l" tick={{ fontSize: 11 }} />
-                <YAxis yAxisId="r" orientation="right" domain={[80, 100]} tick={{ fontSize: 11 }} unit="%" />
-                <Tooltip itemSorter={(i) => -Number(i.value ?? 0)} contentStyle={tip} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar yAxisId="l" dataKey="Total" fill={GREEN} radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="l" dataKey="Solucionados" fill={YELLOW} radius={[4, 4, 0, 0]} />
-                <Line yAxisId="r" type="monotone" dataKey="% Resolução" stroke={GREEN_MARK} strokeWidth={2} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </Card>
-        </section>
 
           </TabsContent>
         </Tabs>
