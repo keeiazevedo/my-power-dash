@@ -1,4 +1,4 @@
-# Comparações nos destaques da Saúde
-- [x] Manter ano completo como padrão e acrescentar comparação com mês anterior.
-- [x] Aplicar segmento às comparações sem alterar os demais indicadores e filtros.
-- [x] Testar cálculos e seleção dos destaques no dashboard.
+# Prévia integrada para a diretoria
+- [x] Unir Saúde e Administrativo na demonstração, preservando o painel oficial.
+- [x] Acrescentar semáforos com metas ilustrativas editáveis, sem salvar dados.
+- [x] Verificar metas, apresentação e visual em desktop e celular.

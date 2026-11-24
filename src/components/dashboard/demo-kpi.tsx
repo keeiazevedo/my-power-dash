@@ -1,5 +1,6 @@
 import { ResponsiveContainer, LineChart, Line, Tooltip } from "recharts";
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 export type DemoPoint = { mes: string; valor: number };
 export type DemoMetric = {
@@ -9,9 +10,10 @@ export type DemoMetric = {
   points: DemoPoint[];
   icon: LucideIcon;
   accent?: boolean;
+  children?: ReactNode;
 };
 
-export function DemoKpi({ label, value, note, points, icon: Icon, accent }: DemoMetric) {
+export function DemoKpi({ label, value, note, points, icon: Icon, accent, children }: DemoMetric) {
   const color = accent ? "var(--secondary)" : "var(--primary)";
   return (
     <article className="demo-kpi min-w-0 overflow-hidden rounded-lg border bg-card text-card-foreground">
@@ -34,6 +36,7 @@ export function DemoKpi({ label, value, note, points, icon: Icon, accent }: Demo
         ) : <div className="flex h-full items-center border-t text-xs text-muted-foreground">Total anual · sem detalhamento mensal</div>}
       </div>
       {points.length > 0 && <div className="flex justify-between px-5 pb-3 text-[10px] text-muted-foreground"><span>{points[0]?.mes}</span><span>{points.at(-1)?.mes}</span></div>}
+      {children && <div className="border-t px-5 py-3">{children}</div>}
     </article>
   );
 }
