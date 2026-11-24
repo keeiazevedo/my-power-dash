@@ -7,7 +7,7 @@ import { Calendar, Filter, X, LayoutDashboard, Car, Plane, Headset, Layers } fro
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPeriodoOptions, getPeriodoIndices, type PeriodoId } from "@/lib/dashboard-analytics";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
-import { admMonths, computeAdmExecutive, type AdmComparison } from "@/lib/adm-analytics";
+import { admMonths, computeAdmExecutive, computeAdmYear, type AdmComparison } from "@/lib/adm-analytics";
 import { useAdmData, importAdm, exportAdm, MESES_ADM, SEGMENTOS_ADM, ANOS_ADM } from "@/lib/adm-store";
 
 const GREEN = "#007A4D", GREEN_80 = "#3BA27E", GREEN_60 = "#5CAF8F", GREEN_45 = "#87C3A9", GREEN_MARK = "#4E7F71";
@@ -107,9 +107,11 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
   });
 
   const meses = admMonths(data);
-  const [mesSel, setMesSel] = useState<string>("");
+  const [mesSel, setMesSel] = useState<string>("ANO");
   const mesPer = periodo.startsWith("M:") ? periodo.slice(2) : "";
+  const modoAno = !meses.includes(mesPer) && !meses.includes(mesSel);
   const mesRef = meses.includes(mesPer) ? mesPer : meses.includes(mesSel) ? mesSel : meses[meses.length - 1] ?? "";
+  const anoExec = useMemo(() => computeAdmYear(data, seg), [data, seg]);
   const exec = useMemo(() => (mesRef ? computeAdmExecutive(data, seg, mesRef) : null), [data, seg, mesRef]);
   const cmp = exec?.comparisons, prev = exec?.previousMonth ?? null;
   const num = (n: number) => Math.round(n).toLocaleString("pt-BR");
@@ -232,14 +234,15 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
         {exec && (
           <>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Mês de referência</span>
-              <select value={mesRef} onChange={(e) => setMesSel(e.target.value)} className="rounded-md border bg-white px-3 py-1.5 text-sm font-medium shadow-sm">
-                {meses.map((m) => <option key={m} value={m}>{m}</option>)}
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Destaques</span>
+              <select value={modoAno ? "ANO" : mesRef} onChange={(e) => setMesSel(e.target.value)} className="rounded-md border bg-white px-3 py-1.5 text-sm font-medium shadow-sm">
+                <option value="ANO">Ano completo</option>
+                {meses.map((m) => <option key={m} value={m}>Comparar {m} x mês anterior</option>)}
               </select>
-              <span className="text-xs text-muted-foreground">{prev ? `comparado com ${prev}` : "sem mês anterior para comparar"} • {sub}</span>
+              <span className="text-xs text-muted-foreground">{modoAno ? `${anoExec.first ?? ""} a ${anoExec.last ?? ""} (último mês com dados)` : prev ? `${mesRef} comparado com ${prev}` : "sem mês anterior para comparar"} • {seg === "TODOS" ? "Todos os segmentos" : seg}</span>
             </div>
-            <InsightsPanel insights={exec.insights} periodoLabel={`${mesRef}/${ano}`} />
-            <div className="space-y-4">
+            <InsightsPanel insights={modoAno ? anoExec.insights : exec.insights} periodoLabel={modoAno ? `Ano ${ano} (${anoExec.first ?? ""}–${anoExec.last ?? ""})` : `${mesRef}/${ano}`} />
+            {!modoAno && <div className="space-y-4">
               <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <KPI label={`Chamados Administrativos • ${mesRef}`} value={cmp?.chamados.current != null ? num(cmp.chamados.current) : "—"}><Delta c={cmp?.chamados} fmt={num} prev={prev} goodDown={false} /></KPI>
                 <KPI label={`Taxa de Resolução • ${mesRef}`} value={cmp?.resolucao.current != null ? `${cmp.resolucao.current.toFixed(1)}%` : "—"} accent={YELLOW}><Delta c={cmp?.resolucao} fmt={num} prev={prev} goodDown={false} pp /></KPI>
@@ -254,7 +257,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
                 <KPI label={`Quantidade de Viagens • ${mesRef}`} value={cmp?.qtdViagens.current != null ? num(cmp.qtdViagens.current) : "—"}>{cmp?.qtdViagens.current != null ? <Delta c={cmp?.qtdViagens} fmt={num} prev={prev} /> : <div className="mt-1 text-[11px] text-muted-foreground">Preencha na planilha base</div>}</KPI>
                 <KPI label={`Ticket Médio Viagens • ${mesRef}`} value={cmp?.ticketViagens.current != null ? brl(cmp.ticketViagens.current) : "—"} accent={YELLOW}>{cmp?.ticketViagens.current != null ? <Delta c={cmp?.ticketViagens} fmt={brl} prev={prev} /> : <div className="mt-1 text-[11px] text-muted-foreground">Depende da quantidade de viagens</div>}</KPI>
               </section>
-            </div>
+            </div>}
             <h2 className="pt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Acumulado • {periodoAtual.shortLabel}</h2>
           </>
         )}

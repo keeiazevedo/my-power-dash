@@ -79,3 +79,31 @@ export function computeAdmExecutive(data: AdmData, segment: string, month: strin
     : { id: "resolucao", tone: resolution.delta > 0 ? "positive" : resolution.delta < 0 ? "warning" : "neutral", title: `Resolução ${resolution.delta > 0 ? "avançou" : resolution.delta < 0 ? "recuou" : "estável"}`, description: `${pct(resolution.current)}% em ${month}; ${pct(resolution.delta)} ponto(s) percentual(is) ${resolution.delta > 0 ? "acima" : resolution.delta < 0 ? "abaixo" : "de diferença em relação a"} ${previousMonth}. Todos os segmentos.` });
   return { comparisons, insights, previousMonth };
 }
+/** Destaques do ano completo (do primeiro ao último mês com dados). */
+export function computeAdmYear(data: AdmData, segment: string) {
+  const months = admMonths(data);
+  const first = months[0], last = months[months.length - 1];
+  const insights: InsightItem[] = [];
+  if (!first || !last) return { insights, first: null, last: null };
+  const per = months.map(m => ({ m, ...monthMetrics(data, m, segment) }));
+  const sum = (k: "uber" | "viagens") => per.reduce((s, r) => s + (r[k] ?? 0), 0);
+  const uberT = sum("uber"), viaT = sum("viagens"), total = uberT + viaT;
+  insights.push({ id: "custo-ano", tone: "neutral", title: `Custo total de ${first} a ${last}: ${money(total)}`, description: `Uber ${money(uberT)} (${pct(total ? uberT / total * 100 : 0)}%) e viagens ${money(viaT)} (${pct(total ? viaT / total * 100 : 0)}%).` });
+  const peak = per.map(r => ({ m: r.m, v: (r.uber ?? 0) + (r.viagens ?? 0) })).sort((a, b) => b.v - a.v)[0];
+  const avg = total / months.length;
+  if (peak) insights.push({ id: "pico", tone: "warning", title: `Mês de maior custo: ${peak.m}`, description: `${money(peak.v)}, ${pct(avg ? (peak.v / avg - 1) * 100 : 0)}% acima da média mensal de ${money(avg)}.` });
+  if (segment === "TODOS") {
+    const segs = [...new Set([...data.uber, ...data.viagens].map(r => r.segmento))].map(s => ({ s, v: [...data.uber, ...data.viagens].filter(r => r.segmento === s).reduce((a, r) => a + r.valor, 0) })).sort((a, b) => b.v - a.v);
+    const top = segs[0];
+    if (top) insights.push({ id: "seg-top", tone: "neutral", title: `Segmento de maior custo: ${top.s}`, description: `${money(top.v)} no ano, ${pct(total ? top.v / total * 100 : 0)}% do custo total de Uber e viagens.` });
+  }
+  const lastV = per[per.length - 1]!, lastCost = (lastV.uber ?? 0) + (lastV.viagens ?? 0);
+  if (months.length > 1) {
+    const d = avg ? (lastCost / avg - 1) * 100 : 0;
+    insights.push({ id: "tendencia", tone: d > 0 ? "warning" : "positive", title: `${last} ${d > 0 ? "acima" : "abaixo"} da média do ano`, description: `${money(lastCost)} no último mês com dados, ${pct(d)}% ${d > 0 ? "acima" : "abaixo"} da média mensal.` });
+  }
+  const ch = data.chamados.filter(r => months.includes(r.mes));
+  const tot = ch.reduce((s, r) => s + r.total, 0), sol = ch.reduce((s, r) => s + r.solucionados, 0);
+  if (tot) insights.push({ id: "resolucao-ano", tone: "positive", title: `Resolução no ano: ${pct(sol / tot * 100)}%`, description: `${sol.toLocaleString("pt-BR")} de ${tot.toLocaleString("pt-BR")} chamados solucionados. Todos os segmentos.` });
+  return { insights, first, last };
+}
