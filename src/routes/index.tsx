@@ -773,7 +773,7 @@ function SaudeDashboard({
       <KpiCard
         label="Casos em Limbo"
         value={formatInt(kpis.limboAtual)}
-        sublabel={`Posição em ${kpis.limboMesFinal} (${segSubtitle})`}
+        sublabel={`Último mês com dados: ${kpis.limboMesFinal}${kpis.limboPico ? ` • Pico: ${formatInt(kpis.limboPico)} (${kpis.limboPicoMes})` : ""}`}
         icon={UserX}
         accent={YELLOW}
         trend={kpis.limboTrend}
@@ -1191,7 +1191,7 @@ function SaudeDashboard({
                 />
 
                 <KpiCard
-                  label="Total CAT no Recorte"
+                  label="Total de CAT"
                   value={formatInt(kpis.totalCat)}
                   sublabel={kpis.catSublabel}
                   icon={ShieldAlert}
@@ -1257,7 +1257,7 @@ function SaudeDashboard({
                 <KpiCard
                   label="Limbo Previdenciário"
                   value={formatInt(kpis.limboAtual)}
-                  sublabel={`Posição em ${kpis.limboMesFinal} (${segSubtitle})`}
+                  sublabel={`Último mês com dados: ${kpis.limboMesFinal}${kpis.limboPico ? ` • Pico: ${formatInt(kpis.limboPico)} (${kpis.limboPicoMes})` : ""}`}
                   icon={UserX}
                   accent={YELLOW}
                   trend={kpis.limboTrend}
@@ -1386,7 +1386,7 @@ function SaudeDashboard({
         )}
 
         <footer className="border-t pt-4 text-center text-xs text-muted-foreground">
-          Setor {setorLabel} • Ano {ano} • Recorte: {periodoAtual.shortLabel} ({segSubtitle}) •
+          Setor {setorLabel} • Ano {ano} • Período: {periodoAtual.shortLabel} ({segSubtitle}) •
           Identidade Visual Bravante
         </footer>
       </main>

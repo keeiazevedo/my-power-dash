@@ -238,6 +238,8 @@ export type ExecutiveKpis = {
   limboAtual: number;
   limboInicial: number;
   limboMesFinal: string;
+  limboPico: number;
+  limboPicoMes: string;
   limboTrend?: TrendInfo;
   totalEnfermagem: number;
   enfermagemNoturnoPct: number;
@@ -339,19 +341,24 @@ export function computeExecutiveKpis(
 
   const firstIdx = filtered.indices[0] ?? 0;
   const limboInicial = sumRowSegments(data.limboPrevidenciario[firstIdx], segList);
-  const limboAtual = sumRowSegments(data.limboPrevidenciario[activeIdx], segList);
-  const limboMesFinal = refMesAtual;
+  // Meses ainda sem dados (zerados no fim do ano) não devem virar a "posição atual".
+  const limboIdxs = filtered.indices.filter((i) => i <= activeIdx);
+  const limboComDados = limboIdxs.filter(
+    (i) => sumRowSegments(data.limboPrevidenciario[i], data.segmentos) > 0,
+  );
+  const limboIdx = limboComDados[limboComDados.length - 1] ?? activeIdx;
+  const limboAtual = sumRowSegments(data.limboPrevidenciario[limboIdx], segList);
+  const limboMesFinal = data.meses[limboIdx] ?? refMesAtual;
+  let limboPico = 0;
+  let limboPicoMes = "";
+  for (const i of limboIdxs) {
+    const v = sumRowSegments(data.limboPrevidenciario[i], segList);
+    if (v > limboPico) { limboPico = v; limboPicoMes = data.meses[i] ?? ""; }
+  }
   const limboTrend =
-    activeIdx !== firstIdx
+    limboIdx !== firstIdx
       ? makePercentTrend(limboAtual, limboInicial, data.meses[firstIdx] ?? "", true)
-      : prevIdx >= 0
-        ? makePercentTrend(
-            limboAtual,
-            sumRowSegments(data.limboPrevidenciario[prevIdx], segList),
-            prevMesName,
-            true,
-          )
-        : undefined;
+      : undefined;
 
   const totalEnfermagem = filtered.atendimentosEnfermagem.reduce((s, r) => s + r.TOTAL, 0);
   const totalEnfNoturno = filtered.atendimentosEnfermagem.reduce((s, r) => s + r.NOTURNO, 0);
@@ -425,6 +432,8 @@ export function computeExecutiveKpis(
     limboAtual,
     limboInicial,
     limboMesFinal,
+    limboPico,
+    limboPicoMes,
     limboTrend,
     totalEnfermagem,
     enfermagemNoturnoPct,
