@@ -1,4 +1,4 @@
-# Prévia integrada para a diretoria
-- [x] Unir Saúde e Administrativo na demonstração, preservando o painel oficial.
-- [x] Acrescentar semáforos com metas ilustrativas editáveis, sem salvar dados.
-- [x] Verificar metas, apresentação e visual em desktop e celular.
+# Prévia de busca e parecer executivo
+- [x] Criar busca de indicadores na demonstração, sem alterar o painel oficial.
+- [x] Gerar parecer descritivo com dados reais e os filtros selecionados, sem IA paga.
+- [x] Verificar busca, parecer, filtros e isolamento em desktop e celular.

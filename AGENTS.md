@@ -13,3 +13,4 @@
 - Share presentation/theme state through DashboardExperience and filtered KPI series through KpiSeriesContext; visual enhancements must not write or transform stored datasets.
 - Keep health highlight month selection independent of chart period filters and compute descriptive comparisons in health-month-insights; highlight changes must not change KPI totals.
 - Keep integrated preview targets in component-local state and classify them through demo-goals; illustrative goals must never become official targets or modify imported datasets.
+- Build preview search and descriptive reports through `demo-analysis`; generate reports locally from filtered data, invalidate stale reports, and never allocate annual-only totals to months or segments.
