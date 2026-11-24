@@ -57,6 +57,40 @@ function RankTable({ t }: { t: ViagemTabela }) {
   );
 }
 
+function SavingHighlight({ t }: { t?: ViagemTabela }) {
+  const rows = dataRows(t).filter((r) => typeof r[1] === "number");
+  if (!t || !rows.length) return null;
+  const parse = (v: unknown) => { const m = String(v ?? "").match(/[\d.,]+/); return m ? Number(m[0].replace(/\./g, "").replace(",", ".")) : 0; };
+  const unit = String(rows[0]?.[2] ?? "").replace(/^[\s\d.,R$]+/, "").trim();
+  const total = rows.reduce((a, r) => a + parse(r[2]), 0);
+  const periodo = String(rows[0]?.[3] ?? "");
+  return (
+    <section data-indicator="Saving em passagens aéreas" className="relative overflow-hidden rounded-2xl border-2 border-primary bg-primary p-5 text-primary-foreground shadow-lg break-inside-avoid">
+      <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-secondary/30 blur-2xl" />
+      <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 shrink-0 animate-bounce items-center justify-center rounded-full bg-secondary text-3xl font-black text-secondary-foreground shadow-md">▼</div>
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest opacity-90">Destaque • Redução de custo</div>
+            <div className="text-lg font-semibold">Saving em passagens aéreas {periodo && `(${periodo})`}</div>
+            <div className="mt-1 text-4xl font-black tracking-tight md:text-5xl">{total.toLocaleString("pt-BR")}{unit && ` ${unit}`}</div>
+            <div className="text-xs opacity-90">economizados com descontos negociados</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {rows.map((r) => (
+            <div key={String(r[0])} className="rounded-xl bg-primary-foreground/15 px-4 py-3 backdrop-blur">
+              <div className="text-sm font-bold">{String(r[0])}</div>
+              <div className="text-2xl font-black">▼ {(n(r[1]) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</div>
+              <div className="text-xs opacity-90">desconto médio • saving {String(r[2] ?? "")}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 const RANKINGS = ["TOP 10 Trechos", "TOP 10 Hotéis", "TOP 10 Locadoras", "TOP 10 Centros Custo", "TOP 10 VIAJANTES AÉREO", "TOP 10 VIAJANTES HOTEL", "TOP 10 VIAJANTES CARRO", "TOP 10 Carro Viajantes", "Fora Política AÉREO", "Fora Política HOTEL", "Carro Fora 48 Horas", "Saving Aéreo Jan-Out"];
 
 export function ViagensSection({ data, via, meses, sub, children }: { data: AdmData; via: ViagemRow[]; meses: string[]; sub: string; children?: React.ReactNode }) {
@@ -85,6 +119,7 @@ export function ViagensSection({ data, via, meses, sub, children }: { data: AdmD
   return (
     <div className="space-y-6">
       {children}
+      <SavingHighlight t={tab(data, "Saving Aéreo Jan-Out")} />
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Mini label="Passagens Aéreas" value={brl(cls("Passagens aéreas"))} sub={total ? `${((cls("Passagens aéreas") / total) * 100).toFixed(1)}% do custo de viagens` : undefined} />
         <Mini label="Hospedagem" value={brl(cls("Hospedagem"))} sub={total ? `${((cls("Hospedagem") / total) * 100).toFixed(1)}% do custo de viagens` : undefined} yellow />
