@@ -12,6 +12,8 @@ import { segColor } from "@/lib/segment-colors";
 import { useAdmData, importAdm, exportAdm, MESES_ADM, SEGMENTOS_ADM, ANOS_ADM } from "@/lib/adm-store";
 
 import { ViagensSection } from "@/components/dashboard/adm-viagens";
+import { useEditor } from "@/hooks/use-editor";
+import { EditorLogin } from "@/components/dashboard/editor-login";
 import { RequisitosSection } from "@/components/dashboard/adm-requisitos";
 import { DashboardDisplayControls } from "@/components/dashboard/dashboard-experience";
 import { KpiSeriesContext, KpiSparkline } from "@/components/dashboard/kpi-sparkline";
@@ -58,6 +60,7 @@ function KPI({ label, value, accent = GREEN, children }: { label: string; value:
 }
 
 export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a: string) => void; header: React.ReactNode }) {
+  const { isEditor } = useEditor();
   const { data, save, reset } = useAdmData(ano);
   const [seg, setSeg] = useState("TODOS");
   const [periodo, setPeriodo] = useState<PeriodoId>("ANO");
@@ -196,14 +199,15 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
           <div className="flex flex-col gap-2 sm:items-end">
             <DashboardDisplayControls />
           <div className="presentation-tools no-print flex flex-wrap items-center gap-2">
-            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f); }} />
+            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f && isEditor) handleImport(f); }} />
             <Button variant="outline" onClick={() => exportAdm(data, `base-administrativo-${ano}.xlsx`)}
               className="border-primary text-xs font-semibold uppercase text-primary"><Download className="size-3.5" />Baixar planilha base</Button>
-            <Button onClick={() => fileRef.current?.click()} disabled={busy}
-              className="text-xs font-semibold uppercase"><Upload className="size-3.5" />{busy ? "Importando..." : "Importar planilha base"}</Button>
+            {isEditor && <Button onClick={() => fileRef.current?.click()} disabled={busy}
+              className="text-xs font-semibold uppercase"><Upload className="size-3.5" />{busy ? "Importando..." : "Importar planilha base"}</Button>}
             <Button variant="outline" onClick={() => window.print()} title="Imprimir aba atual ou salvar como PDF" className="text-xs font-semibold uppercase"><Printer className="size-3.5 text-muted-foreground" />PDF / Imprimir</Button>
-            <button onClick={() => { if (confirm("Restaurar dados iniciais?")) { reset(); setMsg("Dados restaurados."); } }}
-              className="rounded-md border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm hover:bg-muted">Restaurar</button>
+            {isEditor && <button onClick={() => { if (confirm("Restaurar dados iniciais?")) { reset(); setMsg("Dados restaurados."); } }}
+              className="rounded-md border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm hover:bg-muted">Restaurar</button>}
+            <EditorLogin />
           </div>
           </div>
         </div>

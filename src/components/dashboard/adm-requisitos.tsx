@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, CircleSlash, ClipboardList } from "lucide-react";
 import { RequisitoAnexo } from "./requisito-anexo";
-import { EditorLogin } from "./editor-login";
-import { EditorProvider } from "@/hooks/use-editor";
+import { useEditor } from "@/hooks/use-editor";
 import { calcRequisito, fmtData, fromISO, toISO, STATUS_REQ, UNIDADES_REQ, UNIDADE_NOME, validadeLabel, type RequisitoRow, type RequisitoStatus } from "@/lib/adm-requisitos";
 
 const STATUS_STYLE: Record<RequisitoStatus, { bar: string; badge: string }> = {
@@ -14,11 +13,13 @@ const STATUS_STYLE: Record<RequisitoStatus, { bar: string; badge: string }> = {
 const LABEL: Record<RequisitoStatus, string> = { "EM DIA": "Em dia", "A VENCER": "A vencer", VENCIDO: "Vencido", "SEM PROGRAMAÇÃO": "Sem programação" };
 
 export function RequisitosSection({ rows, onChange, compact }: { rows: RequisitoRow[]; onChange?: (rows: RequisitoRow[]) => void; compact?: boolean }) {
+  const { isEditor } = useEditor();
+  const ro = !isEditor || !onChange;
   const [unidade, setUnidade] = useState("TODAS");
   const [servico, setServico] = useState("TODOS");
   const [status, setStatus] = useState("TODOS");
   const all = useMemo(() => rows.map((r, idx) => ({ ...calcRequisito(r), idx })), [rows]);
-  const edit = (idx: number, patch: Partial<RequisitoRow>) => onChange?.(rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  const edit = (idx: number, patch: Partial<RequisitoRow>) => !ro && onChange?.(rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   const inp = "h-8 w-full min-w-[7.5rem] rounded-md border bg-background px-2 text-sm";
   const servicos = useMemo(() => [...new Set(all.map((r) => r.servico))].sort(), [all]);
   const base = all.filter((r) => (unidade === "TODAS" || r.unidade === unidade) && (servico === "TODOS" || r.servico === servico));
@@ -100,10 +101,10 @@ export function RequisitosSection({ rows, onChange, compact }: { rows: Requisito
         </div>
       </div>
 
-      {!compact && <EditorProvider><div data-indicator="Controle de check-lists" className="rounded-xl border bg-card p-4 shadow-sm">
+      {!compact && <div data-indicator="Controle de check-lists" className="rounded-xl border bg-card p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="border-l-4 border-primary pl-3"><h3 className="text-sm font-semibold uppercase tracking-wide">Controle de Check-lists ({lista.length})</h3><p className="text-xs text-muted-foreground">Edite aqui na tabela ou pela aba "Check-lists Legais" da planilha base</p></div>
-<div className="flex flex-wrap items-center gap-2"><EditorLogin />          <select aria-label="Status" className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
+          <div className="border-l-4 border-primary pl-3"><h3 className="text-sm font-semibold uppercase tracking-wide">Controle de Check-lists ({lista.length})</h3><p className="text-xs text-muted-foreground">{ro ? "Somente leitura — entre como editor para alterar" : "Edite aqui na tabela ou pela aba \"Check-lists Legais\" da planilha base"}</p></div>
+<div className="flex flex-wrap items-center gap-2">          <select aria-label="Status" className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="TODOS">Todos os status</option>{STATUS_REQ.map((s) => <option key={s} value={s}>{LABEL[s]}</option>)}
           </select></div>
         </div>
@@ -114,10 +115,10 @@ export function RequisitosSection({ rows, onChange, compact }: { rows: Requisito
               {lista.map((r) => (
                 <tr key={r.idx} className="border-b last:border-0">
                   <td className="p-2"><b>{r.servico}</b>{r.fornecedor && <span className="block text-xs text-muted-foreground">{r.fornecedor}</span>}</td>
-                  <td className="p-2"><select aria-label={`Unidade de ${r.servico}`} className={inp} value={r.unidade} onChange={(e) => edit(r.idx, { unidade: e.target.value })}>{unidades.map((u) => <option key={u} value={u}>{u}</option>)}</select></td>
-                  <td className="p-2"><input type="date" aria-label={`Última execução de ${r.servico}`} className={inp} value={toISO(r.ultimaExecucao)} onChange={(e) => edit(r.idx, { ultimaExecucao: fromISO(e.target.value), proximoVencimento: "" })} /><span className="block text-xs text-muted-foreground">{validadeLabel(r.validadeDias)}</span></td>
-                  <td className="p-2"><input type="date" aria-label={`Próximo vencimento de ${r.servico}`} className={`${inp} font-semibold`} value={r.vencimento ? r.vencimento.toISOString().slice(0, 10) : ""} onChange={(e) => edit(r.idx, { proximoVencimento: fromISO(e.target.value) })} /><span className="block text-xs text-muted-foreground">{r.dias === null ? "Definir programação" : r.dias < 0 ? `${-r.dias} dias em atraso` : `Em ${r.dias} dias`}</span></td>
-                  <td className="p-2"><input aria-label={`Responsável por ${r.servico}`} className={inp} value={r.responsavel} placeholder="—" onChange={(e) => edit(r.idx, { responsavel: e.target.value })} /></td>
+                  <td className="p-2"><select disabled={ro} aria-label={`Unidade de ${r.servico}`} className={inp} value={r.unidade} onChange={(e) => edit(r.idx, { unidade: e.target.value })}>{unidades.map((u) => <option key={u} value={u}>{u}</option>)}</select></td>
+                  <td className="p-2"><input type="date" disabled={ro} aria-label={`Última execução de ${r.servico}`} className={inp} value={toISO(r.ultimaExecucao)} onChange={(e) => edit(r.idx, { ultimaExecucao: fromISO(e.target.value), proximoVencimento: "" })} /><span className="block text-xs text-muted-foreground">{validadeLabel(r.validadeDias)}</span></td>
+                  <td className="p-2"><input type="date" disabled={ro} aria-label={`Próximo vencimento de ${r.servico}`} className={`${inp} font-semibold`} value={r.vencimento ? r.vencimento.toISOString().slice(0, 10) : ""} onChange={(e) => edit(r.idx, { proximoVencimento: fromISO(e.target.value) })} /><span className="block text-xs text-muted-foreground">{r.dias === null ? "Definir programação" : r.dias < 0 ? `${-r.dias} dias em atraso` : `Em ${r.dias} dias`}</span></td>
+                  <td className="p-2"><input disabled={ro} aria-label={`Responsável por ${r.servico}`} className={inp} value={r.responsavel} placeholder="—" onChange={(e) => edit(r.idx, { responsavel: e.target.value })} /></td>
                   <td className="p-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[r.status].badge}`}>{LABEL[r.status]}</span></td>
                   <td className="p-2"><RequisitoAnexo chave={`${r.servico}|${r.idx}`} label={r.servico} /></td>
                 </tr>
@@ -125,7 +126,7 @@ export function RequisitosSection({ rows, onChange, compact }: { rows: Requisito
             </tbody>
           </table>
         </div>
-      </div></EditorProvider>}
+      </div>}
     </div>
   );
 }

@@ -61,6 +61,8 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { somaQtd } from "@/lib/dashboard-store";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
 import { BrandTooltip, ChartCard } from "@/components/dashboard/chart-card";
+import { useEditor } from "@/hooks/use-editor";
+import { EditorLogin } from "@/components/dashboard/editor-login";
 import { DashboardEmptyState } from "@/components/dashboard/empty-state";
 import { AdmDashboard } from "@/components/AdmDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -194,6 +196,7 @@ function SaudeDashboard({
   ano: string;
   setAno: (a: string) => void;
 }) {
+  const { isEditor } = useEditor();
   const [periodo, setPeriodo] = useState<PeriodoId>("ANO");
   const [seg, setSeg] = useState<string>("TODOS");
   const [activeTab, setActiveTab] = useState<TabValue>("visao-executiva");
@@ -930,7 +933,7 @@ function SaudeDashboard({
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
-                if (f) handleImport(f);
+                if (f && isEditor) handleImport(f);
               }}
             />
             <Button variant="outline"
@@ -941,7 +944,7 @@ function SaudeDashboard({
               <Download className="h-3.5 w-3.5" />
               Baixar planilha base
             </Button>
-            <Button
+            {isEditor && <Button
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={importing}
@@ -949,7 +952,7 @@ function SaudeDashboard({
             >
               <Upload className="h-3.5 w-3.5" />
               {importing ? "Importando..." : "Importar planilha base"}
-            </Button>
+            </Button>}
             <Button variant="outline"
               type="button"
               onClick={() => window.print()}
@@ -960,7 +963,7 @@ function SaudeDashboard({
               PDF / Imprimir
             </Button>
 
-            <AlertDialog>
+            {isEditor && <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button
                   type="button"
@@ -986,7 +989,8 @@ function SaudeDashboard({
                   <AlertDialogAction onClick={handleReset}>Confirmar restauração</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
-            </AlertDialog>
+            </AlertDialog>}
+            <EditorLogin />
           </div>
           </div>
         </div>
@@ -1117,7 +1121,7 @@ function SaudeDashboard({
           <DashboardEmptyState
             setorLabel={setorLabel}
             ano={ano}
-            onImportClick={() => fileRef.current?.click()}
+            onImportClick={isEditor ? () => fileRef.current?.click() : undefined}
             onExportTemplate={handleExportTemplate}
           />
         ) : (
