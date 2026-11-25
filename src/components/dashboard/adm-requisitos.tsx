@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, CircleSlash, ClipboardList } from "lucide-react";
+import { RequisitoAnexo } from "./requisito-anexo";
 import { calcRequisito, fmtData, fromISO, toISO, STATUS_REQ, UNIDADES_REQ, UNIDADE_NOME, validadeLabel, type RequisitoRow, type RequisitoStatus } from "@/lib/adm-requisitos";
 
 const STATUS_STYLE: Record<RequisitoStatus, { bar: string; badge: string }> = {
@@ -106,7 +107,7 @@ export function RequisitosSection({ rows, onChange, compact }: { rows: Requisito
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-left text-xs uppercase text-muted-foreground"><th className="p-2">Serviço</th><th className="p-2">Unidade</th><th className="p-2">Última execução</th><th className="p-2">Próximo vencimento</th><th className="p-2">Responsável</th><th className="p-2">Status</th></tr></thead>
+            <thead><tr className="border-b text-left text-xs uppercase text-muted-foreground"><th className="p-2">Serviço</th><th className="p-2">Unidade</th><th className="p-2">Última execução</th><th className="p-2">Próximo vencimento</th><th className="p-2">Responsável</th><th className="p-2">Status</th><th className="p-2">Anexo</th></tr></thead>
             <tbody>
               {lista.map((r) => (
                 <tr key={r.idx} className="border-b last:border-0">
@@ -116,6 +117,7 @@ export function RequisitosSection({ rows, onChange, compact }: { rows: Requisito
                   <td className="p-2"><input type="date" aria-label={`Próximo vencimento de ${r.servico}`} className={`${inp} font-semibold`} value={r.vencimento ? r.vencimento.toISOString().slice(0, 10) : ""} onChange={(e) => edit(r.idx, { proximoVencimento: fromISO(e.target.value) })} /><span className="block text-xs text-muted-foreground">{r.dias === null ? "Definir programação" : r.dias < 0 ? `${-r.dias} dias em atraso` : `Em ${r.dias} dias`}</span></td>
                   <td className="p-2"><input aria-label={`Responsável por ${r.servico}`} className={inp} value={r.responsavel} placeholder="—" onChange={(e) => edit(r.idx, { responsavel: e.target.value })} /></td>
                   <td className="p-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[r.status].badge}`}>{LABEL[r.status]}</span></td>
+                  <td className="p-2"><RequisitoAnexo chave={`${r.servico}|${r.idx}`} label={r.servico} /></td>
                 </tr>
               ))}
             </tbody>
