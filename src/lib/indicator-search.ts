@@ -81,9 +81,6 @@ export const ADM_INDICATORS: IndicatorEntry[] = [
     "TOP 10 | HOTÉIS",
     "TOP 10 | LOCADORAS",
     "TOP 10 | CENTROS DE CUSTO",
-    "TOP 10 VIAJANTES | AÉREO",
-    "TOP 10 VIAJANTES | HOTEL",
-    "TOP 10 VIAJANTES | CARRO",
     "SAVING DE DESCONTOS EM PASSAGENS AÉREAS",
   ]),
   {

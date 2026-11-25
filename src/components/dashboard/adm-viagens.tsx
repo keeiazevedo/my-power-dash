@@ -87,7 +87,7 @@ function SavingHighlight({ t }: { t?: ViagemTabela }) {
   );
 }
 
-const RANKINGS = ["TOP 10 Trechos", "TOP 10 Hotéis", "TOP 10 Locadoras", "TOP 10 Centros Custo", "Fora Política AÉREO", "Fora Política HOTEL", "Carro Fora 48 Horas"];
+const RANKINGS = ["TOP 10 Trechos", "TOP 10 Hotéis", "TOP 10 Locadoras", "TOP 10 Centros Custo"];
 
 export function ViagensSection({ data, via, meses, sub, children }: { data: AdmData; via: ViagemRow[]; meses: string[]; sub: string; children?: React.ReactNode }) {
   const sumBy = (k: (r: ViagemRow) => string) => {
