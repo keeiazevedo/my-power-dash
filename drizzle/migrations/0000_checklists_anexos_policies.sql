@@ -1,0 +1,3 @@
+CREATE POLICY "anexos checklists leitura" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'checklists-anexos');
+CREATE POLICY "anexos checklists envio" ON storage.objects FOR INSERT TO anon, authenticated WITH CHECK (bucket_id = 'checklists-anexos');
+CREATE POLICY "anexos checklists remocao" ON storage.objects FOR DELETE TO anon, authenticated USING (bucket_id = 'checklists-anexos');

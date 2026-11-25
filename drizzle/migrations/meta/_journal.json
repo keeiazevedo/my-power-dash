@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1795618604729,
+      "tag": "0000_checklists_anexos_policies",
+      "breakpoints": true
+    }
+  ]
+}
