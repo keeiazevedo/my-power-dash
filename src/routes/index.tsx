@@ -253,7 +253,7 @@ function SaudeDashboard({
       "Casos em Limbo": limbo, "Limbo Previdenciário": limbo,
       "Atend. Clínicos": points(m => (data.atendimentosEnfermagem.find(r => r.mes === m)?.TOTAL ?? 0) + (data.atendimentosMerp.find(r => r.mes === m)?.quantidade ?? 0)),
       "Atend. Enfermagem": enf, "Atend. MERP": merp,
-      "Não Contratação": points(m => data.recomendacaoNaoContratacao.find(r => r.mes === m)?.quantidade ?? 0),
+      "ASOs Inaptos (Admissão)": points(m => data.recomendacaoNaoContratacao.find(r => r.mes === m)?.quantidade ?? 0),
       "Novos Afast. INSS": points(m => segmentSum(data.afastamentoInss.find(r => r.mes === m))),
       "Ações PQV Previstas": qvPrev, "Ações PQV Realizadas": qv,
       "% Atendimento QV": qvRate, "% Atendimento": qvRate,
@@ -411,7 +411,7 @@ function SaudeDashboard({
 
   const chartNaoContratacao = (
     <ChartCard
-      title="Recomendação de Não Contratação (ASO)"
+      title="ASOs Inaptos (Admissão)"
       subtitle={`Por mês • ${periodoAtual.shortLabel}`}
       badge={scopeEmpresaBadge ?? `Total: ${formatInt(kpis.totalNaoContratacao)}`}
     >
@@ -430,7 +430,7 @@ function SaudeDashboard({
           <Area
             type="monotone"
             dataKey="quantidade"
-            name="Não Contratações"
+            name="ASOs Inaptos (Admissão)"
             stroke={GREEN}
             fill="url(#gradGreen)"
             strokeWidth={2}
@@ -1199,7 +1199,7 @@ function SaudeDashboard({
                   scopeBadge={segAtivo !== "TODOS" ? "Empresa" : undefined}
                 />
                 <KpiCard
-                  label="Não Contratação"
+                  label="ASOs Inaptos (Admissão)"
                   value={formatInt(kpis.totalNaoContratacao)}
                   sublabel="Recomendações no ASO"
                   icon={UserX}

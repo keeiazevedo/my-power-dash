@@ -16,12 +16,11 @@ export const HEALTH_INDICATORS: IndicatorEntry[] = [
   ...entries("aso-clinico", [
     "ASO Previsto",
     "ASO Realizado",
-    "Não Contratação",
+    "ASOs Inaptos (Admissão)",
     "Atend. Enfermagem",
     "Atend. MERP",
     "ASO Periódico - Previsto x Realizado",
     "Alterações no ASO por Especialidade",
-    "Recomendação de Não Contratação (ASO)",
     "Atendimentos de Enfermagem",
     "Atendimentos MERP",
   ]),
