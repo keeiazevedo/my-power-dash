@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "anexos checklists remocao" ON storage.objects;
