@@ -14,7 +14,7 @@ export type ViagemTabela = { aba: string; titulo: string; linhaCabecalho: number
 export const ABAS_VIAGENS = [
   "TOP 10 Trechos", "TOP 10 Hotéis", "TOP 10 Locadoras", "TOP 10 VIAJANTES AÉREO", "TOP 10 VIAJANTES HOTEL",
   "TOP 10 VIAJANTES CARRO", "TOP 10 Centros Custo", "Fora Política AÉREO", "Saving Aéreo Jan-Out", "Fora Política HOTEL",
-  "Carro Fora 48 Horas", "Resumo Antecedência", "TOP 10 Carro Viajantes", "CONSOLIDADO PRODUTO GERAL", "CONSOLIDADO PRODUTO MÊS A MÊS",
+  "Carro Fora 48 Horas", "Resumo Antecedência", "CONSOLIDADO PRODUTO GERAL", "CONSOLIDADO PRODUTO MÊS A MÊS",
 ];
 export const ABA_MES_A_MES = "CONSOLIDADO PRODUTO MÊS A MÊS";
 /** Viagens não têm segmento na planilha: representam o setor inteiro. */

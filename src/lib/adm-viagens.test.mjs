@@ -12,7 +12,7 @@ test("outubro soma R$ 1.825.927,80 em viagens", () => {
   expect(out).toBeCloseTo(1825927.8, 2);
 });
 
-test("planilha base traz as 15 abas de viagens e reimporta com os mesmos valores", async () => {
+test("planilha base traz as 14 abas de viagens e reimporta com os mesmos valores", async () => {
   const wb = buildAdmWorkbook(baseAdm("2026"));
   for (const a of ABAS_VIAGENS) expect(wb.SheetNames).toContain(a);
   expect(wb.SheetNames).not.toContain("Planilha5");
