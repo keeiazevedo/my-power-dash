@@ -151,14 +151,20 @@ export function exportToExcel(data: DashboardData, fileName = "dashboard-saude.x
 }
 
 // ---------- Import ----------
-export async function importFromExcel(file: File): Promise<DashboardData> {
+export async function importFromExcel(file: File, base?: DashboardData): Promise<DashboardData> {
   const buffer = await file.arrayBuffer();
   const wb = XLSX.read(buffer, { type: "array" });
 
+  const semAcento = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+  const aba = (name: string) => wb.SheetNames.find((n) => semAcento(n) === semAcento(name));
+  /** Aba presente no arquivo? O que não vem no arquivo permanece como está. */
+  const tem = (name: string) => !!aba(name);
+  const manter = <T>(name: string, lido: T[], guardado: T[]) => (tem(name) ? lido : guardado);
+
   const readSheet = (name: string): Record<string, unknown>[] => {
-    const ws = wb.Sheets[name];
-    if (!ws) return [];
-    return XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: 0 });
+    const n = aba(name);
+    if (!n) return [];
+    return XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[n], { defval: 0 });
   };
 
   const alt = readSheet(SHEETS.ASO_ESPECIALIDADE).map((r) => ({
@@ -245,34 +251,47 @@ export async function importFromExcel(file: File): Promise<DashboardData> {
   const meses = (asoPr.length ? asoPr : catMes).map((r) => r.mes).filter(Boolean);
 
   // Derive segmentos from CAT segmento sheet
-  const segmentos = catSeg.length
-    ? catSeg.map((r) => r.segmento).filter(Boolean)
-    : defaultData.segmentos;
+  const segmentosLidos = catSeg.map((r) => r.segmento).filter(Boolean);
+
+  /** Mantém a lista mais completa: enviar só algumas abas não encurta meses nem segmentos. */
+  const maisCompleto = <T>(...listas: (T[] | undefined)[]) =>
+    listas.filter((l): l is T[] => !!l && l.length > 0).sort((a, b) => b.length - a.length)[0] ?? [];
 
   const statusAfast = [...HEALTH_STATUSES];
 
+  if (!Object.values(SHEETS).some(tem))
+    throw new Error("Não encontrei nenhuma aba conhecida na planilha.");
+
   return {
-    meses: meses.length ? meses : defaultData.meses,
-    segmentos,
+    meses: maisCompleto(meses, base?.meses, defaultData.meses),
+    segmentos: tem(SHEETS.CAT_SEGMENTO)
+      ? maisCompleto(segmentosLidos, base?.segmentos, defaultData.segmentos)
+      : maisCompleto(base?.segmentos, defaultData.segmentos),
     statusAfast,
-    alteracoesAso: alt.length ? alt : defaultData.alteracoesAso,
-    recomendacaoNaoContratacao: naoContr.length ? naoContr : defaultData.recomendacaoNaoContratacao,
-    asoPeriodicoPrevReal: asoPr.length ? asoPr : defaultData.asoPeriodicoPrevReal,
-    catPorMes: catMes.length ? catMes : defaultData.catPorMes,
-    catPorSegmento: catSeg.length ? catSeg : defaultData.catPorSegmento,
-    catPorAno: catAno.length ? catAno : defaultData.catPorAno,
-    atendimentosEnfermagem: enf.length ? enf : defaultData.atendimentosEnfermagem,
-    atendimentosMerp: merp.length ? merp : defaultData.atendimentosMerp,
-    atestadoMedico: atestado.length ? atestado : defaultData.atestadoMedico,
-    taxaAbsenteismo: absent.length ? absent : defaultData.taxaAbsenteismo,
-    afastamentoInss: afInss.length ? afInss : defaultData.afastamentoInss,
-    afastamentoStatus: afStatus.length ? afStatus : defaultData.afastamentoStatus,
-    limboPrevidenciario: limbo.length ? limbo : defaultData.limboPrevidenciario,
-    qualidadeVida: qv.length ? qv : defaultData.qualidadeVida,
-    qualidadeVidaResumo: qvResRow && Object.keys(qvResRow).length ? qvResumo : defaultData.qualidadeVidaResumo,
-    testesAlcoolDrogas: testesAd,
-    atendimentosSociais: social,
-    ...(asoPendentes !== undefined ? { asoPendentes } : {}),
+    alteracoesAso: manter(SHEETS.ASO_ESPECIALIDADE, alt, base?.alteracoesAso ?? defaultData.alteracoesAso),
+    recomendacaoNaoContratacao: manter(SHEETS.ASO_NAO_CONTRATACAO, naoContr, base?.recomendacaoNaoContratacao ?? defaultData.recomendacaoNaoContratacao),
+    asoPeriodicoPrevReal: manter(SHEETS.ASO_PREV_REAL, asoPr, base?.asoPeriodicoPrevReal ?? defaultData.asoPeriodicoPrevReal),
+    catPorMes: manter(SHEETS.CAT_MES, catMes, base?.catPorMes ?? defaultData.catPorMes),
+    catPorSegmento: manter(SHEETS.CAT_SEGMENTO, catSeg, base?.catPorSegmento ?? defaultData.catPorSegmento),
+    catPorAno: manter(SHEETS.CAT_ANO, catAno, base?.catPorAno ?? defaultData.catPorAno),
+    atendimentosEnfermagem: manter(SHEETS.ENFERMAGEM, enf, base?.atendimentosEnfermagem ?? defaultData.atendimentosEnfermagem),
+    atendimentosMerp: manter(SHEETS.MERP, merp, base?.atendimentosMerp ?? defaultData.atendimentosMerp),
+    atestadoMedico: manter(SHEETS.ATESTADO, atestado, base?.atestadoMedico ?? defaultData.atestadoMedico),
+    taxaAbsenteismo: manter(SHEETS.ABSENTEISMO, absent, base?.taxaAbsenteismo ?? defaultData.taxaAbsenteismo),
+    afastamentoInss: manter(SHEETS.AFAST_INSS, afInss, base?.afastamentoInss ?? defaultData.afastamentoInss),
+    afastamentoStatus: manter(SHEETS.AFAST_STATUS, afStatus, base?.afastamentoStatus ?? defaultData.afastamentoStatus),
+    limboPrevidenciario: manter(SHEETS.LIMBO, limbo, base?.limboPrevidenciario ?? defaultData.limboPrevidenciario),
+    qualidadeVida: manter(SHEETS.QV, qv, base?.qualidadeVida ?? defaultData.qualidadeVida),
+    qualidadeVidaResumo: tem(SHEETS.QV_RESUMO) ? qvResumo : base?.qualidadeVidaResumo ?? defaultData.qualidadeVidaResumo,
+    ...(tem(SHEETS.TESTES_AD)
+      ? { testesAlcoolDrogas: testesAd }
+      : base?.testesAlcoolDrogas?.length ? { testesAlcoolDrogas: base.testesAlcoolDrogas } : {}),
+    ...(tem(SHEETS.SOCIAL)
+      ? { atendimentosSociais: social }
+      : base?.atendimentosSociais?.length ? { atendimentosSociais: base.atendimentosSociais } : {}),
+    ...(tem(SHEETS.ASO_PENDENTES)
+      ? asoPendentes !== undefined ? { asoPendentes } : {}
+      : base?.asoPendentes !== undefined ? { asoPendentes: base.asoPendentes } : {}),
   };
 }
 

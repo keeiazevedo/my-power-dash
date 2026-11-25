@@ -148,7 +148,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
 
   const handleImport = async (f: File) => {
     setBusy(true); setMsg(null);
-    try { save(await importAdm(f)); setMsg("Planilha base importada com sucesso."); }
+    try { save(await importAdm(f, data)); setMsg("Planilha base importada com sucesso."); }
     catch (e) { setMsg("Erro ao importar: " + (e instanceof Error ? e.message : String(e))); }
     finally { setBusy(false); if (fileRef.current) fileRef.current.value = ""; }
   };

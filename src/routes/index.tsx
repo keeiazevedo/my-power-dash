@@ -333,7 +333,7 @@ function SaudeDashboard({
   const handleImport = async (file: File) => {
     setImporting(true);
     try {
-      const next = await importFromExcel(file);
+      const next = await importFromExcel(file, data);
       save(next);
       toast.success(`Dados importados com sucesso para ${setorLabel} • ${ano}.`);
     } catch (e) {

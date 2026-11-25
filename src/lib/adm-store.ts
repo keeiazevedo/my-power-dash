@@ -69,8 +69,10 @@ const pick = (r: Record<string, unknown>, ...keys: string[]) => {
 };
 
 /** Lê a planilha base (mesmo formato do CONSOLIDADO_ADM): abas Uber, Planilha5 (ou Viagens Base), Chamados e Indicadores. */
-export async function importAdm(file: File): Promise<AdmData> {
+export async function importAdm(file: File, base?: AdmData): Promise<AdmData> {
   const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+  /** Aba presente no arquivo? O que não vem no arquivo permanece como está. */
+  const tem = (...names: string[]) => wb.SheetNames.some((s) => names.some((x) => norm(s) === norm(x)));
   const find = (...names: string[]) => {
     const n = wb.SheetNames.find((s) => names.some((x) => norm(s) === norm(x)));
     return n ? XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[n], { defval: "" }) : [];
@@ -89,8 +91,9 @@ export async function importAdm(file: File): Promise<AdmData> {
     cur.corridas += c === undefined || c === "" ? 1 : num(c);
     uberMap.set(k, cur);
   }
+  const uber = tem("Uber") ? [...uberMap.values()] : base?.uber ?? [];
 
-  const viagensTabelas: ViagemTabela[] = [];
+  const lidas = new Map<string, ViagemTabela>();
   for (const aba of ABAS_VIAGENS) {
     const n = wb.SheetNames.find((s) => norm(s) === norm(aba));
     if (!n) continue;
@@ -103,7 +106,14 @@ export async function importAdm(file: File): Promise<AdmData> {
     const linhas = clean.slice(h + 1).map((r) => Array.from({ length: cabecalho.length }, (_, i) => r[i] ?? null));
     while (linhas.length && linhas[linhas.length - 1]!.every((v) => v === null)) linhas.pop();
     const titulo = String(clean.flat().find((v) => v !== null) ?? aba);
-    viagensTabelas.push({ aba, titulo, linhaCabecalho: h + 1, cabecalho, linhas });
+    lidas.set(aba, { aba, titulo, linhaCabecalho: h + 1, cabecalho, linhas });
+  }
+  // Abas que não vieram no arquivo continuam com os dados atuais.
+  const guardadas = new Map((base?.viagensTabelas ?? []).map((t) => [norm(t.aba), t]));
+  const viagensTabelas: ViagemTabela[] = [];
+  for (const aba of ABAS_VIAGENS) {
+    const t = lidas.get(aba) ?? guardadas.get(norm(aba));
+    if (t) viagensTabelas.push(t);
   }
 
   const viaMap = new Map<string, ViagemRow>();
@@ -120,18 +130,21 @@ export async function importAdm(file: File): Promise<AdmData> {
     viaMap.set(k, cur);
   }
 
-  const chamados: ChamadoRow[] = [];
+  const chamadosLidos: ChamadoRow[] = [];
   for (const r of find("Chamados")) {
     const mes = toMes(pick(r, "Período", "Periodo", "Mês"));
     const total = pick(r, "N° Total de Chamados", "Total");
     if (!mes || total === "" || total === undefined) continue;
-    chamados.push({ mes, solucionados: num(pick(r, "N° De Chamados Solucionados", "Solucionados")), total: num(total) });
+    chamadosLidos.push({ mes, solucionados: num(pick(r, "N° De Chamados Solucionados", "Solucionados")), total: num(total) });
   }
+  const chamados = tem("Chamados") ? chamadosLidos : base?.chamados ?? [];
 
   const totalRow = find("Indicadores", "Resumo").find(
     (r) => norm(pick(r, "Indicador", "Métrica", "Metrica", "Nome")) === "QUANTIDADE DE VIAGENS",
   );
-  const quantidadeViagensTotal = totalRow ? num(pick(totalRow, "Valor", "Quantidade", "Total")) : null;
+  const quantidadeViagensTotal = tem("Indicadores", "Resumo")
+    ? totalRow ? num(pick(totalRow, "Valor", "Quantidade", "Total")) : null
+    : base?.quantidadeViagensTotal ?? null;
 
   const reqRows = find("Check-lists Legais", "Check-lists", "Requisitos Legais", "Requisitos");
   const requisitos: RequisitoRow[] = [];
@@ -154,11 +167,14 @@ export async function importAdm(file: File): Promise<AdmData> {
     }
   }
 
-  const out: AdmData = viagensTabelas.length
-    ? { uber: [...uberMap.values()], viagens: viagensFromTabelas(viagensTabelas), chamados, quantidadeViagensTotal, viagensTabelas }
-    : { uber: [...uberMap.values()], viagens: [...viaMap.values()], chamados, quantidadeViagensTotal };
-  if (reqRows.length) out.requisitos = requisitos;
-  if (!out.uber.length && !out.viagens.length && !out.chamados.length && !requisitos.length)
+  const viagens = viagensTabelas.length
+    ? viagensFromTabelas(viagensTabelas)
+    : tem("Planilha5", "Viagens Base", "Viagens") ? [...viaMap.values()] : base?.viagens ?? [];
+  const out: AdmData = { uber, viagens, chamados, quantidadeViagensTotal };
+  if (viagensTabelas.length) out.viagensTabelas = viagensTabelas;
+  if (tem("Check-lists Legais", "Check-lists", "Requisitos Legais", "Requisitos")) out.requisitos = requisitos;
+  else if (base?.requisitos) out.requisitos = base.requisitos;
+  if (!lidas.size && !tem("Uber", "Chamados", "Indicadores", "Resumo", "Planilha5", "Viagens Base", "Viagens", "Check-lists Legais", "Check-lists", "Requisitos Legais", "Requisitos"))
     throw new Error("Não encontrei as abas Uber, Chamados, Viagens ou Check-lists Legais na planilha.");
   return out;
 }
