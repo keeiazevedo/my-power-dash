@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { carregarOnline, removerOnline, salvarOnline } from "./online-store";
 import * as XLSX from "xlsx";
 import base2026 from "./adm-data-2026.json";
 import { baseRequisitos, calcRequisito, fmtData, parseData, type RequisitoRow } from "./adm-requisitos";
@@ -214,35 +216,42 @@ const key = (ano: string) => `dashboard-adm-${ano}`;
 export function useAdmData(ano: string) {
   const [data, setData] = useState<AdmData>(() => baseAdm(ano));
   useEffect(() => {
-    const base = baseAdm(ano);
-    let next = base;
+    let cancel = false;
+    const merge = (saved: AdmData): AdmData => {
+      const base = baseAdm(ano);
+      // Dados salvos antes da nova estrutura de viagens recebem a base atual de viagens.
+      if (!saved.viagensTabelas?.length && base.viagensTabelas?.length) {
+        saved.viagens = base.viagens;
+        saved.viagensTabelas = base.viagensTabelas;
+      }
+      if (!saved.requisitos && base.requisitos) saved.requisitos = base.requisitos;
+      return {
+        ...saved,
+        quantidadeViagensTotal: Object.prototype.hasOwnProperty.call(saved, "quantidadeViagensTotal")
+          ? saved.quantidadeViagensTotal
+          : base.quantidadeViagensTotal,
+      };
+    };
+    let next = baseAdm(ano);
     try {
       const raw = localStorage.getItem(key(ano));
-      if (raw) {
-        const saved = JSON.parse(raw) as AdmData;
-        // Dados salvos antes da nova estrutura de viagens recebem a base atual de viagens.
-        if (!saved.viagensTabelas?.length && base.viagensTabelas?.length) {
-          saved.viagens = base.viagens;
-          saved.viagensTabelas = base.viagensTabelas;
-        }
-        if (!saved.requisitos && base.requisitos) saved.requisitos = base.requisitos;
-        next = {
-          ...saved,
-          quantidadeViagensTotal: Object.prototype.hasOwnProperty.call(saved, "quantidadeViagensTotal")
-            ? saved.quantidadeViagensTotal
-            : base.quantidadeViagensTotal,
-        };
-      }
+      if (raw) next = merge(JSON.parse(raw) as AdmData);
     } catch { /* ignore */ }
     setData(next);
+    carregarOnline<AdmData>(key(ano)).then((online) => {
+      if (!cancel && online) setData(merge(online));
+    });
+    return () => { cancel = true; };
   }, [ano]);
   const save = useCallback((d: AdmData) => {
     setData(d);
     try { localStorage.setItem(key(ano), JSON.stringify(d)); } catch { /* ignore */ }
+    salvarOnline(key(ano), d).then((ok) => { if (!ok) toast.error("Não foi possível salvar online. Entre como editor."); });
   }, [ano]);
   const reset = useCallback(() => {
     setData(baseAdm(ano));
     try { localStorage.removeItem(key(ano)); } catch { /* ignore */ }
+    void removerOnline(key(ano));
   }, [ano]);
   return { data, save, reset };
 }

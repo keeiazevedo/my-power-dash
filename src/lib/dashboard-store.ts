@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
+import { carregarOnline, removerOnline, salvarOnline } from "./online-store";
 import * as XLSX from "xlsx";
 import saude2026 from "./saude-data-2026.json";
 import { HEALTH_STATUSES, healthStatusRows, normalizeHealthStatuses } from "./health-status";
@@ -329,24 +331,30 @@ export function useDashboardData(setor: string, ano: string) {
   const [data, setData] = useState<DashboardData>(() => baseDataFor(setor, ano));
 
   useEffect(() => {
-    let next = baseDataFor(setor, ano);
+    let cancel = false;
+    const merge = (saved: DashboardData) => {
+      const next = baseDataFor(setor, ano);
+      return normalizeHealthStatuses({
+        ...saved,
+        testesAlcoolDrogas: saved.testesAlcoolDrogas?.length ? saved.testesAlcoolDrogas : next.testesAlcoolDrogas,
+        atendimentosSociais: saved.atendimentosSociais?.length ? saved.atendimentosSociais : next.atendimentosSociais,
+        ...((saved.asoPendentes ?? next.asoPendentes) !== undefined ? { asoPendentes: saved.asoPendentes ?? next.asoPendentes } : {}),
+      });
+    };
+    let next = normalizeHealthStatuses(baseDataFor(setor, ano));
     try {
       const raw =
         localStorage.getItem(keyFor(setor, ano)) ??
         (setor === "SAUDE" && ano === "2025" ? localStorage.getItem(STORAGE_KEY) : null);
-      if (raw) {
-        const saved = JSON.parse(raw) as DashboardData;
-        next = {
-          ...saved,
-          testesAlcoolDrogas: saved.testesAlcoolDrogas?.length ? saved.testesAlcoolDrogas : next.testesAlcoolDrogas,
-          atendimentosSociais: saved.atendimentosSociais?.length ? saved.atendimentosSociais : next.atendimentosSociais,
-          ...((saved.asoPendentes ?? next.asoPendentes) !== undefined ? { asoPendentes: saved.asoPendentes ?? next.asoPendentes } : {}),
-        };
-      }
+      if (raw) next = merge(JSON.parse(raw) as DashboardData);
     } catch {
       /* ignore */
     }
-    setData(normalizeHealthStatuses(next));
+    setData(next);
+    carregarOnline<DashboardData>(keyFor(setor, ano)).then((online) => {
+      if (!cancel && online) setData(merge(online));
+    });
+    return () => { cancel = true; };
   }, [setor, ano]);
 
   const save = useCallback((next: DashboardData) => {
@@ -357,6 +365,9 @@ export function useDashboardData(setor: string, ano: string) {
     } catch {
       /* ignore */
     }
+    salvarOnline(keyFor(setor, ano), normalized).then((ok) =>
+      ok ? toast.success("Salvo online para todos") : toast.error("Não foi possível salvar online. Entre como editor."),
+    );
   }, [setor, ano]);
 
   const reset = useCallback(() => {
@@ -367,6 +378,7 @@ export function useDashboardData(setor: string, ano: string) {
     } catch {
       /* ignore */
     }
+    void removerOnline(keyFor(setor, ano));
   }, [setor, ano]);
 
   return { data, save, reset };

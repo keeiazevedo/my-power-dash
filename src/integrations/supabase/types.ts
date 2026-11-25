@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      dashboard_dados: {
+        Row: {
+          chave: string
+          dados: Json
+          updated_at: string
+        }
+        Insert: {
+          chave: string
+          dados: Json
+          updated_at?: string
+        }
+        Update: {
+          chave?: string
+          dados?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       editores: {
         Row: {
           created_at: string

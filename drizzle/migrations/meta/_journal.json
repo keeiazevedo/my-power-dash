@@ -29,6 +29,13 @@
       "when": 1795619098938,
       "tag": "0003_checklists_editores",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795619643783,
+      "tag": "0004_dashboard_dados_online",
+      "breakpoints": true
     }
   ]
 }
