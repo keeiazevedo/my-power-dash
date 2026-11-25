@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, CircleSlash, ClipboardList } from "lucide-react";
 import { RequisitoAnexo } from "./requisito-anexo";
+import { EditorLogin } from "./editor-login";
+import { EditorProvider } from "@/hooks/use-editor";
 import { calcRequisito, fmtData, fromISO, toISO, STATUS_REQ, UNIDADES_REQ, UNIDADE_NOME, validadeLabel, type RequisitoRow, type RequisitoStatus } from "@/lib/adm-requisitos";
 
 const STATUS_STYLE: Record<RequisitoStatus, { bar: string; badge: string }> = {
@@ -98,12 +100,12 @@ export function RequisitosSection({ rows, onChange, compact }: { rows: Requisito
         </div>
       </div>
 
-      {!compact && <div data-indicator="Controle de check-lists" className="rounded-xl border bg-card p-4 shadow-sm">
+      {!compact && <EditorProvider><div data-indicator="Controle de check-lists" className="rounded-xl border bg-card p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="border-l-4 border-primary pl-3"><h3 className="text-sm font-semibold uppercase tracking-wide">Controle de Check-lists ({lista.length})</h3><p className="text-xs text-muted-foreground">Edite aqui na tabela ou pela aba "Check-lists Legais" da planilha base</p></div>
-          <select aria-label="Status" className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
+<div className="flex flex-wrap items-center gap-2"><EditorLogin />          <select aria-label="Status" className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="TODOS">Todos os status</option>{STATUS_REQ.map((s) => <option key={s} value={s}>{LABEL[s]}</option>)}
-          </select>
+          </select></div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -123,7 +125,7 @@ export function RequisitosSection({ rows, onChange, compact }: { rows: Requisito
             </tbody>
           </table>
         </div>
-      </div>}
+      </div></EditorProvider>}
     </div>
   );
 }

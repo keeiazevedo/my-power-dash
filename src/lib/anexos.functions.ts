@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const BUCKET = "checklists-anexos";
 const pastaSchema = z.object({ pasta: z.string().regex(/^[a-zA-Z0-9._-]{1,80}$/) });
@@ -22,8 +23,11 @@ export const abrirAnexo = createServerFn({ method: "POST" })
   });
 
 export const removerAnexo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ path: z.string().regex(/^[a-zA-Z0-9._-]{1,80}\/[a-zA-Z0-9._-]{1,120}$/) }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { data: ok } = await context.supabase.rpc("is_editor");
+    if (ok !== true) throw new Error("Sem permissão de edição.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.storage.from(BUCKET).remove([data.path]);
     return { ok: true };

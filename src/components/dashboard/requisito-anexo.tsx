@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Paperclip, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useEditor } from "@/hooks/use-editor";
 import { abrirAnexo, buscarAnexo, removerAnexo } from "@/lib/anexos.functions";
 
 const BUCKET = "checklists-anexos";
@@ -8,6 +9,7 @@ const ACEITOS = ["application/pdf", "image/png", "image/jpeg"];
 const limpa = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80);
 
 export function RequisitoAnexo({ chave, label }: { chave: string; label: string }) {
+  const { isEditor } = useEditor();
   const pasta = limpa(chave);
   const [arquivo, setArquivo] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -53,9 +55,9 @@ export function RequisitoAnexo({ chave, label }: { chave: string; label: string 
           <button type="button" onClick={abrir} title={nome} className="flex max-w-[140px] items-center gap-1 truncate rounded-md border px-2 py-1 text-xs font-medium text-primary hover:bg-muted">
             <Paperclip className="h-3 w-3 shrink-0" /><span className="truncate">{nome}</span>
           </button>
-          <button type="button" onClick={remover} aria-label={`Remover anexo de ${label}`} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+          {isEditor && <button type="button" onClick={remover} aria-label={`Remover anexo de ${label}`} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>}
         </>
-      ) : (
+      ) : !isEditor ? <span className="text-xs text-muted-foreground">—</span> : (
         <button type="button" onClick={() => input.current?.click()} className="flex items-center gap-1 rounded-md border border-dashed px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">
           <Paperclip className="h-3 w-3" />Anexar
         </button>
