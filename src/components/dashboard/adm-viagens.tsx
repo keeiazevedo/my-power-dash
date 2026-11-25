@@ -136,7 +136,7 @@ export function ViagensSection({ data, via, meses, sub, children }: { data: AdmD
           <ResponsiveContainer><BarChart data={porMes}>
             <CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="mes" tick={{ fontSize: 11 }} interval={0} /><YAxis tick={{ fontSize: 11 }} tickFormatter={kfmt} />
             <Tooltip itemSorter={sorter} contentStyle={tip} formatter={(v: number) => brl(v)} /><Legend wrapperStyle={{ fontSize: 10 }} />
-            {produtos.map((p, i) => <Bar key={p.name} dataKey={p.name} stackId="a" fill={PALETTE[i % PALETTE.length]} />)}
+            {[...produtos].reverse().map((p) => <Bar key={p.name} dataKey={p.name} stackId="a" fill={PALETTE[produtos.indexOf(p) % PALETTE.length]} />)}
           </BarChart></ResponsiveContainer>
         </Card>
         <Card title="Viagens por Produto (Top 5)" subtitle={sub}>
