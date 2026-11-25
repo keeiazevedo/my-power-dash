@@ -1447,8 +1447,7 @@ function SaudeDashboard({
         )}
 
         <footer className="border-t pt-4 text-center text-xs text-muted-foreground">
-          Setor {setorLabel} • Ano {ano} • Período: {periodoAtual.shortLabel} ({segSubtitle}) •
-          Identidade Visual Bravante
+          Setor {setorLabel} • Ano {ano} • Período: {periodoAtual.shortLabel} ({segSubtitle})
         </footer>
       </main>
     </div></KpiSeriesContext.Provider>

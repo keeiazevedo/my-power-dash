@@ -465,7 +465,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
           </TabsContent>
         </Tabs>
 
-        <footer className="pt-4 text-center text-xs text-muted-foreground">Setor Administrativo • Ano {ano} • Cores da marca Bravante</footer>
+        <footer className="pt-4 text-center text-xs text-muted-foreground">Setor Administrativo • Ano {ano}</footer>
       </main>
     </div></KpiSeriesContext.Provider>
   );
