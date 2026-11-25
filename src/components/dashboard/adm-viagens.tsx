@@ -1,9 +1,9 @@
 import { ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import type { AdmData, ViagemRow, ViagemTabela } from "@/lib/adm-store";
+import { brl, savingDestaque } from "@/lib/adm-saving";
 
 const PALETTE = ["#007A4D", "#EAA921", "#3BA27E", "#F2B844", "#5CAF8F", "#F8C66B", "#87C3A9", "#FFD796", "#4E7F71", "#B6B6B6"];
 const tip = { backgroundColor: "var(--popover)", color: "var(--popover-foreground)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 };
-const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const kfmt = (v: number) => (Math.abs(v) >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)));
 const n = (v: unknown) => (typeof v === "number" ? v : Number(String(v ?? "").replace(/\./g, "").replace(",", ".")) || 0);
 const isNum = (v: unknown) => typeof v === "number";
@@ -58,12 +58,8 @@ function RankTable({ t }: { t: ViagemTabela }) {
 }
 
 function SavingHighlight({ t }: { t?: ViagemTabela }) {
-  const rows = dataRows(t).filter((r) => typeof r[1] === "number");
-  if (!t || !rows.length) return null;
-  const parse = (v: unknown) => { const m = String(v ?? "").match(/[\d.,]+/); return m ? Number(m[0].replace(/\./g, "").replace(",", ".")) : 0; };
-  const unit = String(rows[0]?.[2] ?? "").replace(/^[\s\d.,R$]+/, "").trim();
-  const total = rows.reduce((a, r) => a + parse(r[2]), 0);
-  const periodo = String(rows[0]?.[3] ?? "");
+  const { total, linhas, periodo } = savingDestaque(t);
+  if (!linhas.length) return null;
   return (
     <section data-indicator="Saving em passagens aéreas" className="relative overflow-hidden rounded-2xl border-2 border-primary bg-primary p-5 text-primary-foreground shadow-lg break-inside-avoid">
       <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-secondary/30 blur-2xl" />
@@ -73,16 +69,16 @@ function SavingHighlight({ t }: { t?: ViagemTabela }) {
           <div>
             <div className="text-xs font-bold uppercase tracking-widest opacity-90">Destaque • Redução de custo</div>
             <div className="text-lg font-semibold">Saving em passagens aéreas {periodo && `(${periodo})`}</div>
-            <div className="mt-1 text-4xl font-black tracking-tight md:text-5xl">{total.toLocaleString("pt-BR")}{unit && ` ${unit}`}</div>
+            <div className="mt-1 text-4xl font-black tracking-tight md:text-5xl">{brl(total)}</div>
             <div className="text-xs opacity-90">economizados com descontos negociados</div>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {rows.map((r) => (
-            <div key={String(r[0])} className="rounded-xl bg-primary-foreground/15 px-4 py-3 backdrop-blur">
-              <div className="text-sm font-bold">{String(r[0])}</div>
-              <div className="text-2xl font-black">▼ {(n(r[1]) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</div>
-              <div className="text-xs opacity-90">desconto médio • saving {String(r[2] ?? "")}</div>
+          {linhas.map((l) => (
+            <div key={l.companhia} className="rounded-xl bg-primary-foreground/15 px-4 py-3 backdrop-blur">
+              <div className="text-sm font-bold">{l.companhia}</div>
+              <div className="text-2xl font-black">▼ {(l.desconto * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</div>
+              <div className="text-xs opacity-90">desconto médio • saving {brl(l.saving)}</div>
             </div>
           ))}
         </div>
