@@ -1,0 +1,30 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+
+const BUCKET = "checklists-anexos";
+const pastaSchema = z.object({ pasta: z.string().regex(/^[a-zA-Z0-9._-]{1,80}$/) });
+
+export const buscarAnexo = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => pastaSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: itens } = await supabaseAdmin.storage.from(BUCKET).list(data.pasta, { limit: 10, sortBy: { column: "created_at", order: "desc" } });
+    const f = itens?.find((x) => x.id);
+    return f ? { path: `${data.pasta}/${f.name}` } : null;
+  });
+
+export const abrirAnexo = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ path: z.string().regex(/^[a-zA-Z0-9._-]{1,80}\/[a-zA-Z0-9._-]{1,120}$/) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: s } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(data.path, 600);
+    return { url: s?.signedUrl ?? null };
+  });
+
+export const removerAnexo = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ path: z.string().regex(/^[a-zA-Z0-9._-]{1,80}\/[a-zA-Z0-9._-]{1,120}$/) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.storage.from(BUCKET).remove([data.path]);
+    return { ok: true };
+  });

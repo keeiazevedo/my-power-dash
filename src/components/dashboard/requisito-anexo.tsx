@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Paperclip, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { abrirAnexo, buscarAnexo, removerAnexo } from "@/lib/anexos.functions";
 
 const BUCKET = "checklists-anexos";
 const ACEITOS = ["application/pdf", "image/png", "image/jpeg"];
@@ -13,9 +14,8 @@ export function RequisitoAnexo({ chave, label }: { chave: string; label: string 
   const input = useRef<HTMLInputElement>(null);
 
   const carregar = async () => {
-    const { data } = await supabase.storage.from(BUCKET).list(pasta, { limit: 10, sortBy: { column: "created_at", order: "desc" } });
-    const f = data?.find((x) => x.id);
-    setArquivo(f ? `${pasta}/${f.name}` : null);
+    const r = await buscarAnexo({ data: { pasta } }).catch(() => null);
+    setArquivo(r?.path ?? null);
   };
   useEffect(() => { carregar(); }, [pasta]);
 
@@ -27,20 +27,20 @@ export function RequisitoAnexo({ chave, label }: { chave: string; label: string 
     setOcupado(true);
     const { error } = await supabase.storage.from(BUCKET).upload(`${pasta}/${Date.now()}-${limpa(f.name)}`, f, { contentType: f.type });
     if (error) alert("Não foi possível enviar o anexo. Tente novamente.");
-    else if (arquivo) await supabase.storage.from(BUCKET).remove([arquivo]);
+    else if (arquivo) await removerAnexo({ data: { path: arquivo } });
     await carregar();
     setOcupado(false);
   };
   const abrir = async () => {
     if (!arquivo) return;
     const w = window.open("", "_blank");
-    const { data } = await supabase.storage.from(BUCKET).createSignedUrl(arquivo, 3600);
-    if (data?.signedUrl && w) w.location.href = data.signedUrl; else w?.close();
+    const { url } = await abrirAnexo({ data: { path: arquivo } });
+    if (url && w) w.location.href = url; else w?.close();
   };
   const remover = async () => {
     if (!arquivo || !confirm(`Remover o anexo de ${label}?`)) return;
     setOcupado(true);
-    await supabase.storage.from(BUCKET).remove([arquivo]);
+    await removerAnexo({ data: { path: arquivo } });
     await carregar();
     setOcupado(false);
   };

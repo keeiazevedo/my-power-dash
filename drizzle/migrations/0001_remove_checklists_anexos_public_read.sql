@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "anexos checklists leitura" ON storage.objects;

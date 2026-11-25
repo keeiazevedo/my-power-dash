@@ -8,6 +8,13 @@
       "when": 1795618604729,
       "tag": "0000_checklists_anexos_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795618756122,
+      "tag": "0001_remove_checklists_anexos_public_read",
+      "breakpoints": true
     }
   ]
 }
