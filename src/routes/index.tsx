@@ -990,7 +990,7 @@ function SaudeDashboard({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>}
-            <EditorLogin />
+            <EditorLogin variant="sutil" />
           </div>
           </div>
         </div>

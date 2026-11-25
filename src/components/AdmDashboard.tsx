@@ -207,7 +207,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
             <Button variant="outline" onClick={() => window.print()} title="Imprimir aba atual ou salvar como PDF" className="text-xs font-semibold uppercase"><Printer className="size-3.5 text-muted-foreground" />PDF / Imprimir</Button>
             {isEditor && <button onClick={() => { if (confirm("Restaurar dados iniciais?")) { reset(); setMsg("Dados restaurados."); } }}
               className="rounded-md border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm hover:bg-muted">Restaurar</button>}
-            <EditorLogin />
+            <EditorLogin variant="sutil" />
           </div>
           </div>
         </div>
