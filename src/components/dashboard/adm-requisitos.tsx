@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, CircleSlash, ClipboardList } from "lucide-react";
-import { calcRequisito, fmtData, STATUS_REQ, UNIDADES_REQ, UNIDADE_NOME, validadeLabel, type RequisitoRow, type RequisitoStatus } from "@/lib/adm-requisitos";
+import { calcRequisito, fmtData, fromISO, toISO, STATUS_REQ, UNIDADES_REQ, UNIDADE_NOME, validadeLabel, type RequisitoRow, type RequisitoStatus } from "@/lib/adm-requisitos";
 
 const STATUS_STYLE: Record<RequisitoStatus, { bar: string; badge: string }> = {
   "EM DIA": { bar: "#007A4D", badge: "bg-primary/15 text-primary" },
@@ -10,11 +10,13 @@ const STATUS_STYLE: Record<RequisitoStatus, { bar: string; badge: string }> = {
 };
 const LABEL: Record<RequisitoStatus, string> = { "EM DIA": "Em dia", "A VENCER": "A vencer", VENCIDO: "Vencido", "SEM PROGRAMAÇÃO": "Sem programação" };
 
-export function RequisitosSection({ rows }: { rows: RequisitoRow[] }) {
+export function RequisitosSection({ rows, onChange, compact }: { rows: RequisitoRow[]; onChange?: (rows: RequisitoRow[]) => void; compact?: boolean }) {
   const [unidade, setUnidade] = useState("TODAS");
   const [servico, setServico] = useState("TODOS");
   const [status, setStatus] = useState("TODOS");
-  const all = useMemo(() => rows.map((r) => calcRequisito(r)), [rows]);
+  const all = useMemo(() => rows.map((r, idx) => ({ ...calcRequisito(r), idx })), [rows]);
+  const edit = (idx: number, patch: Partial<RequisitoRow>) => onChange?.(rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  const inp = "h-8 w-full min-w-[7.5rem] rounded-md border bg-background px-2 text-sm";
   const servicos = useMemo(() => [...new Set(all.map((r) => r.servico))].sort(), [all]);
   const base = all.filter((r) => (unidade === "TODAS" || r.unidade === unidade) && (servico === "TODOS" || r.servico === servico));
   const count = (s: RequisitoStatus) => base.filter((r) => r.status === s).length;
@@ -23,10 +25,10 @@ export function RequisitosSection({ rows }: { rows: RequisitoRow[] }) {
   const unidades = [...new Set([...UNIDADES_REQ, ...all.map((r) => r.unidade)])];
   const atencao = count("VENCIDO") + count("A VENCER") + count("SEM PROGRAMAÇÃO");
 
-  if (!rows.length) return <p className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Nenhum requisito na planilha base. Preencha a aba "Requisitos Legais" e importe.</p>;
+  if (!rows.length) return <p className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Nenhum check-list na planilha base. Preencha a aba "Check-lists Legais" e importe.</p>;
 
   const kpis = [
-    { t: "Requisitos cadastrados", v: base.length, s: "Registros no filtro", i: ClipboardList, c: "text-foreground" },
+    { t: "Check-lists cadastrados", v: base.length, s: "Registros no filtro", i: ClipboardList, c: "text-foreground" },
     { t: "Em dia", v: count("EM DIA"), s: "Vencimento acima de 30 dias", i: CheckCircle2, c: "text-primary" },
     { t: "A vencer", v: count("A VENCER"), s: "Nos próximos 30 dias", i: CalendarClock, c: "text-[color:var(--chart-2,#EAA921)]" },
     { t: "Vencidos", v: count("VENCIDO"), s: "Precisam de atenção", i: AlertTriangle, c: "text-destructive" },
@@ -36,7 +38,7 @@ export function RequisitosSection({ rows }: { rows: RequisitoRow[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
+      {!compact && <div className="flex flex-wrap items-center gap-2">
         <select aria-label="Unidade" className={sel} value={unidade} onChange={(e) => setUnidade(e.target.value)}>
           <option value="TODAS">Todas as unidades</option>{unidades.map((u) => <option key={u} value={u}>{u}</option>)}
         </select>
@@ -44,7 +46,7 @@ export function RequisitosSection({ rows }: { rows: RequisitoRow[] }) {
           <option value="TODOS">Todos os serviços</option>{servicos.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         <span className="ml-auto text-xs text-muted-foreground">Status calculado em {fmtData(new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())))}</span>
-      </div>
+      </div>}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {kpis.map((k) => (
@@ -95,9 +97,9 @@ export function RequisitosSection({ rows }: { rows: RequisitoRow[] }) {
         </div>
       </div>
 
-      <div data-indicator="Controle de requisitos" className="rounded-xl border bg-card p-4 shadow-sm">
+      {!compact && <div data-indicator="Controle de check-lists" className="rounded-xl border bg-card p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="border-l-4 border-primary pl-3"><h3 className="text-sm font-semibold uppercase tracking-wide">Controle de requisitos ({lista.length})</h3><p className="text-xs text-muted-foreground">Edite pela aba "Requisitos Legais" da planilha base</p></div>
+          <div className="border-l-4 border-primary pl-3"><h3 className="text-sm font-semibold uppercase tracking-wide">Controle de Check-lists ({lista.length})</h3><p className="text-xs text-muted-foreground">Edite aqui na tabela ou pela aba "Check-lists Legais" da planilha base</p></div>
           <select aria-label="Status" className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="TODOS">Todos os status</option>{STATUS_REQ.map((s) => <option key={s} value={s}>{LABEL[s]}</option>)}
           </select>
@@ -107,19 +109,19 @@ export function RequisitosSection({ rows }: { rows: RequisitoRow[] }) {
             <thead><tr className="border-b text-left text-xs uppercase text-muted-foreground"><th className="p-2">Serviço</th><th className="p-2">Unidade</th><th className="p-2">Última execução</th><th className="p-2">Próximo vencimento</th><th className="p-2">Responsável</th><th className="p-2">Status</th></tr></thead>
             <tbody>
               {lista.map((r) => (
-                <tr key={r.servico + r.unidade} className="border-b last:border-0">
+                <tr key={r.idx} className="border-b last:border-0">
                   <td className="p-2"><b>{r.servico}</b>{r.fornecedor && <span className="block text-xs text-muted-foreground">{r.fornecedor}</span>}</td>
-                  <td className="p-2">{r.unidade}</td>
-                  <td className="p-2">{r.ultimaExecucao || "—"}<span className="block text-xs text-muted-foreground">{validadeLabel(r.validadeDias)}</span></td>
-                  <td className="p-2"><b>{r.vencimento ? fmtData(r.vencimento) : "—"}</b><span className="block text-xs text-muted-foreground">{r.dias === null ? "Definir programação" : r.dias < 0 ? `${-r.dias} dias em atraso` : `Em ${r.dias} dias`}</span></td>
-                  <td className="p-2">{r.responsavel || "—"}</td>
+                  <td className="p-2"><select aria-label={`Unidade de ${r.servico}`} className={inp} value={r.unidade} onChange={(e) => edit(r.idx, { unidade: e.target.value })}>{unidades.map((u) => <option key={u} value={u}>{u}</option>)}</select></td>
+                  <td className="p-2"><input type="date" aria-label={`Última execução de ${r.servico}`} className={inp} value={toISO(r.ultimaExecucao)} onChange={(e) => edit(r.idx, { ultimaExecucao: fromISO(e.target.value), proximoVencimento: "" })} /><span className="block text-xs text-muted-foreground">{validadeLabel(r.validadeDias)}</span></td>
+                  <td className="p-2"><input type="date" aria-label={`Próximo vencimento de ${r.servico}`} className={`${inp} font-semibold`} value={r.vencimento ? r.vencimento.toISOString().slice(0, 10) : ""} onChange={(e) => edit(r.idx, { proximoVencimento: fromISO(e.target.value) })} /><span className="block text-xs text-muted-foreground">{r.dias === null ? "Definir programação" : r.dias < 0 ? `${-r.dias} dias em atraso` : `Em ${r.dias} dias`}</span></td>
+                  <td className="p-2"><input aria-label={`Responsável por ${r.servico}`} className={inp} value={r.responsavel} placeholder="—" onChange={(e) => edit(r.idx, { responsavel: e.target.value })} /></td>
                   <td className="p-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[r.status].badge}`}>{LABEL[r.status]}</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

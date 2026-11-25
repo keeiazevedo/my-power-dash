@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import base2026 from "./adm-data-2026.json";
-import { baseRequisitos, parseData, type RequisitoRow } from "./adm-requisitos";
+import { baseRequisitos, calcRequisito, fmtData, parseData, type RequisitoRow } from "./adm-requisitos";
 
 export const MESES_ADM = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 export const SEGMENTOS_ADM = ["AMBIENTAL", "BUNKER", "CORPORATIVO", "ESTALEIRO", "OFFSHORE"];
@@ -131,7 +131,7 @@ export async function importAdm(file: File): Promise<AdmData> {
   );
   const quantidadeViagensTotal = totalRow ? num(pick(totalRow, "Valor", "Quantidade", "Total")) : null;
 
-  const reqRows = find("Requisitos Legais", "Requisitos");
+  const reqRows = find("Check-lists Legais", "Check-lists", "Requisitos Legais", "Requisitos");
   const requisitos: RequisitoRow[] = [];
   for (const r of reqRows) {
     const servico = String(pick(r, "Serviço", "Servico") ?? "").trim();
@@ -142,6 +142,14 @@ export async function importAdm(file: File): Promise<AdmData> {
     const v = norm(pick(r, "Validade (dias)", "Validade"));
     requisitos.push({ servico, unidade, fornecedor: String(pick(r, "Fornecedor") ?? "").trim(), ultimaExecucao: parseData(ultimaExecucao) ? ultimaExecucao : "",
       validadeDias: v.includes("ANUAL") ? 365 : num(v) || 180, responsavel: String(pick(r, "Responsável", "Responsavel") ?? "").trim() });
+    const pv = pick(r, "Próximo Vencimento", "Proximo Vencimento");
+    const proximo = typeof pv === "number" ? fmtSerial(pv) : String(pv ?? "").trim();
+    const last = requisitos[requisitos.length - 1]!;
+    if (parseData(proximo)) {
+      const calc = parseData(last.ultimaExecucao);
+      const auto = calc ? new Date(calc.getTime() + last.validadeDias * 86400000) : null;
+      if (!auto || auto.getTime() !== parseData(proximo)!.getTime()) last.proximoVencimento = proximo;
+    }
   }
 
   const out: AdmData = viagensTabelas.length
@@ -149,7 +157,7 @@ export async function importAdm(file: File): Promise<AdmData> {
     : { uber: [...uberMap.values()], viagens: [...viaMap.values()], chamados, quantidadeViagensTotal };
   if (reqRows.length) out.requisitos = requisitos;
   if (!out.uber.length && !out.viagens.length && !out.chamados.length && !requisitos.length)
-    throw new Error("Não encontrei as abas Uber, Chamados, Viagens ou Requisitos Legais na planilha.");
+    throw new Error("Não encontrei as abas Uber, Chamados, Viagens ou Check-lists Legais na planilha.");
   return out;
 }
 
@@ -180,12 +188,16 @@ export function buildAdmWorkbook(d: AdmData) {
     { Indicador: "Quantidade de Viagens", Valor: d.quantidadeViagensTotal ?? "" },
   ]), "Indicadores");
   const req = d.requisitos ?? baseRequisitos();
-  const wsReq = XLSX.utils.json_to_sheet(req.map((r) => ({
-    "Serviço": r.servico, Unidade: r.unidade, Fornecedor: r.fornecedor, "Última Execução": r.ultimaExecucao,
-    "Validade (dias)": r.validadeDias >= 365 ? "Anual" : r.validadeDias, "Responsável": r.responsavel,
-  })), { header: ["Serviço", "Unidade", "Fornecedor", "Última Execução", "Validade (dias)", "Responsável"] });
-  wsReq["!cols"] = [{ wch: 38 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 15 }, { wch: 22 }];
-  XLSX.utils.book_append_sheet(wb, wsReq, "Requisitos Legais");
+  const wsReq = XLSX.utils.json_to_sheet(req.map((r) => {
+    const c = calcRequisito(r);
+    return {
+      "Serviço": r.servico, Unidade: r.unidade, Fornecedor: r.fornecedor, "Última Execução": r.ultimaExecucao,
+      "Validade (dias)": r.validadeDias >= 365 ? "Anual" : r.validadeDias,
+      "Próximo Vencimento": c.vencimento ? fmtData(c.vencimento) : "", "Responsável": r.responsavel, "Status (automático)": c.status,
+    };
+  }), { header: ["Serviço", "Unidade", "Fornecedor", "Última Execução", "Validade (dias)", "Próximo Vencimento", "Responsável", "Status (automático)"] });
+  wsReq["!cols"] = [{ wch: 38 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 15 }, { wch: 18 }, { wch: 22 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, wsReq, "Check-lists Legais");
   return wb;
 }
 export function exportAdm(d: AdmData, fileName: string) {

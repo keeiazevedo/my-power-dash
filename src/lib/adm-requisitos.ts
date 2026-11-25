@@ -5,6 +5,8 @@ export type RequisitoRow = {
   servico: string; unidade: string; fornecedor: string;
   /** dd/mm/aaaa ou vazio quando ainda não foi executado. */
   ultimaExecucao: string; validadeDias: number; responsavel: string;
+  /** dd/mm/aaaa definido manualmente; quando vazio, vencimento = última execução + validade. */
+  proximoVencimento?: string;
 };
 export type RequisitoStatus = "EM DIA" | "A VENCER" | "VENCIDO" | "SEM PROGRAMAÇÃO";
 export const STATUS_REQ: RequisitoStatus[] = ["EM DIA", "A VENCER", "VENCIDO", "SEM PROGRAMAÇÃO"];
@@ -23,9 +25,12 @@ const dayUTC = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
 export type RequisitoCalc = RequisitoRow & { vencimento: Date | null; dias: number | null; status: RequisitoStatus };
 export function calcRequisito(r: RequisitoRow, hoje: Date = new Date()): RequisitoCalc {
   const ult = parseData(r.ultimaExecucao);
-  if (!ult) return { ...r, vencimento: null, dias: null, status: "SEM PROGRAMAÇÃO" };
-  const vencimento = new Date(ult.getTime() + r.validadeDias * DAY);
+  const manual = parseData(r.proximoVencimento ?? "");
+  if (!ult && !manual) return { ...r, vencimento: null, dias: null, status: "SEM PROGRAMAÇÃO" };
+  const vencimento = manual ?? new Date(ult!.getTime() + r.validadeDias * DAY);
   const dias = Math.round((vencimento.getTime() - dayUTC(hoje)) / DAY);
   return { ...r, vencimento, dias, status: dias < 0 ? "VENCIDO" : dias <= 30 ? "A VENCER" : "EM DIA" };
 }
 export const validadeLabel = (d: number) => (d >= 365 ? "Validade anual" : `${d} dias`);
+export const toISO = (s: string) => { const d = parseData(s); return d ? d.toISOString().slice(0, 10) : ""; };
+export const fromISO = (s: string) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s); return m ? `${m[3]}/${m[2]}/${m[1]}` : ""; };

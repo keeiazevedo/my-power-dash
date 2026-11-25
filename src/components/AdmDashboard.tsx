@@ -252,8 +252,8 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
               <TabsTrigger value="uber" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Car className="h-4 w-4" />Uber</TabsTrigger>
               <TabsTrigger value="viagens" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Plane className="h-4 w-4" />Viagens</TabsTrigger>
               <TabsTrigger value="chamados" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Headset className="h-4 w-4" />Chamados</TabsTrigger>
+              <TabsTrigger value="requisitos" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Scale className="h-4 w-4" />Check-lists Legais</TabsTrigger>
               <TabsTrigger value="visao-completa" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Layers className="h-4 w-4" />Visão Completa</TabsTrigger>
-              <TabsTrigger value="requisitos" className="gap-1.5 py-1.5 text-xs sm:text-sm"><Scale className="h-4 w-4" />Requisitos Legais</TabsTrigger>
             </TabsList>
           </div>
           <TabsContent value="visao-executiva" className="space-y-6">
@@ -395,6 +395,14 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
 
           <section>
             <div className="mb-2 border-l-4 border-primary pl-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">Check-lists Legais</h2>
+              <p className="text-xs text-muted-foreground">Status calculado pela data de hoje</p>
+            </div>
+            <RequisitosSection rows={data.requisitos ?? []} compact />
+          </section>
+
+          <section>
+            <div className="mb-2 border-l-4 border-primary pl-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground">Custo Uber</h2>
               <p className="text-xs text-muted-foreground">{sub}</p>
             </div>
@@ -453,7 +461,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
 
           </TabsContent>
           <TabsContent value="requisitos" className="space-y-6">
-            <RequisitosSection rows={data.requisitos ?? []} />
+            <RequisitosSection rows={data.requisitos ?? []} onChange={(requisitos) => save({ ...data, requisitos })} />
           </TabsContent>
         </Tabs>
 
