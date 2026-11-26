@@ -21,6 +21,7 @@ import { DashboardAssistant } from "@/components/dashboard/dashboard-assistant";
 import { ADM_INDICATORS } from "@/lib/indicator-search";
 import { Button } from "@/components/ui/button";
 import { AuditHistory } from "@/components/dashboard/audit-history";
+import { PresentationExport } from "@/components/dashboard/presentation-export";
 
 const GREEN = "#007A4D", GREEN_80 = "#3BA27E", GREEN_60 = "#5CAF8F", GREEN_45 = "#87C3A9", GREEN_MARK = "#4E7F71";
 const YELLOW = "#EAA921", YELLOW_80 = "#F2B844", YELLOW_65 = "#F8C66B", YELLOW_45 = "#FFD796", GRAY = "#B6B6B6";
@@ -206,6 +207,7 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
             {isEditor && <Button onClick={() => fileRef.current?.click()} disabled={busy}
               className="text-xs font-semibold uppercase"><Upload className="size-3.5" />{busy ? "Importando..." : "Importar planilha base"}</Button>}
             <Button variant="outline" onClick={() => window.print()} title="Imprimir aba atual ou salvar como PDF" className="text-xs font-semibold uppercase"><Printer className="size-3.5 text-muted-foreground" />PDF / Imprimir</Button>
+            <PresentationExport sector="ADMINISTRATIVO" data={data} ano={ano} periodo={periodo} segment={seg} />
             {isEditor && <button onClick={() => { if (confirm("Restaurar dados iniciais?")) { reset(); setMsg("Dados restaurados."); } }}
               className="rounded-md border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm hover:bg-muted">Restaurar</button>}
             <EditorLogin variant="sutil" />

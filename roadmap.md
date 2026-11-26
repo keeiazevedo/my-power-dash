@@ -11,4 +11,5 @@
 # Histórico e apresentações
 - [x] Registrar importações e alterações de check-lists/anexos com data e editor autorizado.
 - [x] Mostrar histórico discreto nos dois dashboards e verificar permissões.
-- [ ] Gerar PowerPoint atualizado — aguardando escolha entre painel e arquivo no chat.
+- [x] Gerar pelo painel PowerPoint de dois slides com o modelo Bravante e período escolhido.
+- [x] Verificar download, números e aparência dos slides.

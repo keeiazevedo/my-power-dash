@@ -86,6 +86,7 @@ import { HEALTH_INDICATORS } from "@/lib/indicator-search";
 import { Button } from "@/components/ui/button";
 import { HEALTH_STATUSES } from "@/lib/health-status";
 import { AuditHistory } from "@/components/dashboard/audit-history";
+import { PresentationExport } from "@/components/dashboard/presentation-export";
 
 const ANOS = ["2025", "2026", "2027"];
 
@@ -963,6 +964,7 @@ function SaudeDashboard({
               <Printer className="h-3.5 w-3.5 text-muted-foreground" />
               PDF / Imprimir
             </Button>
+            <PresentationExport sector="SAUDE" data={data} ano={ano} periodo={periodo} segment={segAtivo} />
 
             {isEditor && <AlertDialog>
               <AlertDialogTrigger asChild>
