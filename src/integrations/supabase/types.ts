@@ -14,18 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      dashboard_auditoria: {
+        Row: {
+          acao: string
+          chave: string
+          created_at: string
+          detalhes: Json
+          editor_email: string
+          editor_id: string | null
+          id: string
+        }
+        Insert: {
+          acao: string
+          chave: string
+          created_at?: string
+          detalhes?: Json
+          editor_email: string
+          editor_id?: string | null
+          id?: string
+        }
+        Update: {
+          acao?: string
+          chave?: string
+          created_at?: string
+          detalhes?: Json
+          editor_email?: string
+          editor_id?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       dashboard_dados: {
         Row: {
+          audit_origem: string
           chave: string
           dados: Json
           updated_at: string
         }
         Insert: {
+          audit_origem?: string
           chave: string
           dados: Json
           updated_at?: string
         }
         Update: {
+          audit_origem?: string
           chave?: string
           dados?: Json
           updated_at?: string
@@ -53,6 +86,10 @@ export type Database = {
     }
     Functions: {
       is_editor: { Args: never; Returns: boolean }
+      registrar_anexo_enviado: {
+        Args: { p_chave: string; p_label: string; p_path: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

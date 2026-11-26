@@ -85,6 +85,7 @@ import { DashboardAssistant } from "@/components/dashboard/dashboard-assistant";
 import { HEALTH_INDICATORS } from "@/lib/indicator-search";
 import { Button } from "@/components/ui/button";
 import { HEALTH_STATUSES } from "@/lib/health-status";
+import { AuditHistory } from "@/components/dashboard/audit-history";
 
 const ANOS = ["2025", "2026", "2027"];
 
@@ -1450,6 +1451,7 @@ function SaudeDashboard({
           </Tabs>
         )}
 
+        <AuditHistory chave={`dashboard-${setor}-${ano}`} />
         <footer className="border-t pt-4 text-center text-xs text-muted-foreground">
           Setor {setorLabel} • Ano {ano} • Período: {periodoAtual.shortLabel} ({segSubtitle})
         </footer>

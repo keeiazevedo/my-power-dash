@@ -20,6 +20,7 @@ import { KpiSeriesContext, KpiSparkline } from "@/components/dashboard/kpi-spark
 import { DashboardAssistant } from "@/components/dashboard/dashboard-assistant";
 import { ADM_INDICATORS } from "@/lib/indicator-search";
 import { Button } from "@/components/ui/button";
+import { AuditHistory } from "@/components/dashboard/audit-history";
 
 const GREEN = "#007A4D", GREEN_80 = "#3BA27E", GREEN_60 = "#5CAF8F", GREEN_45 = "#87C3A9", GREEN_MARK = "#4E7F71";
 const YELLOW = "#EAA921", YELLOW_80 = "#F2B844", YELLOW_65 = "#F8C66B", YELLOW_45 = "#FFD796", GRAY = "#B6B6B6";
@@ -465,10 +466,11 @@ export function AdmDashboard({ ano, setAno, header }: { ano: string; setAno: (a:
 
           </TabsContent>
           <TabsContent value="requisitos" className="space-y-6">
-            <RequisitosSection rows={data.requisitos ?? []} onChange={(requisitos) => save({ ...data, requisitos })} />
+            <RequisitosSection rows={data.requisitos ?? []} ano={ano} onChange={(requisitos) => save({ ...data, requisitos }, "edicao")} />
           </TabsContent>
         </Tabs>
 
+        <AuditHistory chave={`dashboard-adm-${ano}`} />
         <footer className="pt-4 text-center text-xs text-muted-foreground">Setor Administrativo • Ano {ano}</footer>
       </main>
     </div></KpiSeriesContext.Provider>

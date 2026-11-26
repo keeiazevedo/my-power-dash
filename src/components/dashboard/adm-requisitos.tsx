@@ -13,7 +13,7 @@ const STATUS_STYLE: Record<RequisitoStatus, { bar: string; badge: string }> = {
 };
 const LABEL: Record<RequisitoStatus, string> = { "EM DIA": "Em dia", "A VENCER": "A vencer", VENCIDO: "Vencido", "SEM PROGRAMAÇÃO": "Sem programação" };
 
-export function RequisitosSection({ rows, onChange, compact }: { rows: RequisitoRow[]; onChange?: (rows: RequisitoRow[]) => void; compact?: boolean }) {
+export function RequisitosSection({ rows, onChange, compact, ano = "2026" }: { rows: RequisitoRow[]; onChange?: (rows: RequisitoRow[]) => void; compact?: boolean; ano?: string }) {
   const { isEditor } = useEditor();
   const ro = !isEditor || !onChange;
   const [unidade, setUnidade] = useState("TODAS");
@@ -121,7 +121,7 @@ export function RequisitosSection({ rows, onChange, compact }: { rows: Requisito
                   <td className="p-2"><input type="date" disabled={ro} aria-label={`Próximo vencimento de ${r.servico}`} className={`${inp} font-semibold`} value={r.vencimento ? r.vencimento.toISOString().slice(0, 10) : ""} onChange={(e) => edit(r.idx, { proximoVencimento: fromISO(e.target.value) })} /><span className="block text-xs text-muted-foreground">{r.dias === null ? "Definir programação" : r.dias < 0 ? `${-r.dias} dias em atraso` : `Em ${r.dias} dias`}</span></td>
                   <td className="p-2"><input disabled={ro} aria-label={`Responsável por ${r.servico}`} className={inp} value={r.responsavel} placeholder="—" onChange={(e) => edit(r.idx, { responsavel: e.target.value })} /></td>
                   <td className="p-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[r.status].badge}`}>{LABEL[r.status]}</span></td>
-                  <td className="p-2"><RequisitoAnexo chave={`${r.servico}|${r.idx}`} label={r.servico} /></td>
+                  <td className="p-2"><RequisitoAnexo chave={`${r.servico}|${r.idx}`} label={r.servico} ano={ano} /></td>
                 </tr>
               ))}
             </tbody>

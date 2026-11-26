@@ -3,12 +3,13 @@ import { Loader2, Paperclip, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEditor } from "@/hooks/use-editor";
 import { abrirAnexo, buscarAnexo, removerAnexo } from "@/lib/anexos.functions";
+import { notifyAuditUpdated } from "@/lib/audit-history";
 
 const BUCKET = "checklists-anexos";
 const ACEITOS = ["application/pdf", "image/png", "image/jpeg"];
 const limpa = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80);
 
-export function RequisitoAnexo({ chave, label }: { chave: string; label: string }) {
+export function RequisitoAnexo({ chave, label, ano = "2026" }: { chave: string; label: string; ano?: string }) {
   const { isEditor } = useEditor();
   const pasta = limpa(chave);
   const [arquivo, setArquivo] = useState<string | null>(null);
@@ -21,15 +22,23 @@ export function RequisitoAnexo({ chave, label }: { chave: string; label: string 
   };
   useEffect(() => { carregar(); }, [pasta]);
 
-  const nome = arquivo ? arquivo.split("/").pop()!.replace(/^\d+-/, "") : "";
+  const nome = arquivo?.split("/").pop()?.replace(/^\d+-/, "") ?? "";
 
   const enviar = async (f?: File) => {
     if (!f) return;
     if (!ACEITOS.includes(f.type)) { alert("Envie um arquivo PDF, PNG ou JPEG."); return; }
     setOcupado(true);
-    const { error } = await supabase.storage.from(BUCKET).upload(`${pasta}/${Date.now()}-${limpa(f.name)}`, f, { contentType: f.type });
+    const path = `${pasta}/${Date.now()}-${limpa(f.name)}`;
+    const { error } = await supabase.storage.from(BUCKET).upload(path, f, { contentType: f.type });
     if (error) alert("Não foi possível enviar o anexo. Tente novamente.");
-    else if (arquivo) await removerAnexo({ data: { path: arquivo } });
+    else {
+      const { error: auditError } = await supabase.rpc('registrar_anexo_enviado', { p_chave: `dashboard-adm-${ano}`, p_path: path, p_label: label });
+      if (auditError) alert("Anexo enviado, mas não foi possível registrar o histórico. Tente novamente antes de remover o anterior.");
+      else {
+        notifyAuditUpdated();
+        if (arquivo) await removerAnexo({ data: { path: arquivo, ano, label } });
+      }
+    }
     await carregar();
     setOcupado(false);
   };
@@ -42,9 +51,12 @@ export function RequisitoAnexo({ chave, label }: { chave: string; label: string 
   const remover = async () => {
     if (!arquivo || !confirm(`Remover o anexo de ${label}?`)) return;
     setOcupado(true);
-    await removerAnexo({ data: { path: arquivo } });
-    await carregar();
-    setOcupado(false);
+    try {
+      await removerAnexo({ data: { path: arquivo, ano, label } });
+      notifyAuditUpdated();
+      await carregar();
+    } catch { alert("Não foi possível remover o anexo e registrar o histórico. Tente novamente."); }
+    finally { setOcupado(false); }
   };
 
   return (

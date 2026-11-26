@@ -24,11 +24,17 @@ export const abrirAnexo = createServerFn({ method: "POST" })
 
 export const removerAnexo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ path: z.string().regex(/^[a-zA-Z0-9._-]{1,80}\/[a-zA-Z0-9._-]{1,120}$/) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ path: z.string().regex(/^[a-zA-Z0-9._-]{1,80}\/[a-zA-Z0-9._-]{1,120}$/), ano: z.string().regex(/^\d{4}$/), label: z.string().max(300) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: ok } = await context.supabase.rpc("is_editor");
     if (ok !== true) throw new Error("Sem permissão de edição.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin.storage.from(BUCKET).remove([data.path]);
+    const { error } = await supabaseAdmin.storage.from(BUCKET).remove([data.path]);
+    if (error) throw error;
+    const { error: auditError } = await supabaseAdmin.from('dashboard_auditoria').insert({
+      chave: `dashboard-adm-${data.ano}`, acao: 'anexo_removido', editor_id: context.userId,
+      editor_email: String(context.claims['email'] ?? 'Editor'), detalhes: { path: data.path, servico: data.label },
+    });
+    if (auditError) throw auditError;
     return { ok: true };
   });

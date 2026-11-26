@@ -259,10 +259,10 @@ export function useAdmData(ano: string) {
     });
     return () => { cancel = true; };
   }, [ano]);
-  const save = useCallback((d: AdmData) => {
+  const save = useCallback((d: AdmData, origem: "importacao" | "edicao" = "importacao") => {
     setData(d);
     try { localStorage.setItem(key(ano), JSON.stringify(d)); } catch { /* ignore */ }
-    salvarOnline(key(ano), d).then((ok) => { if (!ok) toast.error("Não foi possível salvar online. Entre como editor."); });
+    salvarOnline(key(ano), d, origem).then((ok) => { if (!ok) toast.error("Não foi possível salvar online. Entre como editor."); });
   }, [ano]);
   const reset = useCallback(() => {
     setData(baseAdm(ano));
